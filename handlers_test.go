@@ -11,12 +11,12 @@ import (
 )
 
 type Scenario struct {
-	url         string
-	body        string
-	fail_db     bool
-	fail_broker bool
-	nil_broker  bool
-	nil_metrics bool
+	url        string
+	body       string
+	failDB     bool
+	failBroker bool
+	nilBroker  bool
+	nilMetrics bool
 }
 
 type MockBroker struct {
@@ -48,13 +48,13 @@ func (mm MockMetrics) NewTimer(stat string) func() {
 }
 
 type TestModel struct {
-	fail_db bool
-	Name    string `json:"name"`
-	Age     int    `json:"age"`
+	failDB bool
+	Name   string `json:"name"`
+	Age    int    `json:"age"`
 }
 
 func (tm *TestModel) Create(r *http.Request) ([]byte, error) {
-	if tm.fail_db {
+	if tm.failDB {
 		return nil, errors.New("Database failed on purpose")
 	}
 	return nil, nil
@@ -72,21 +72,21 @@ func (tm *TestModel) Validate(r *http.Request) error {
 }
 
 func (tm *TestModel) Find(r *http.Request) ([]byte, error) {
-	if tm.fail_db {
+	if tm.failDB {
 		return nil, errors.New("Database failed on purpose")
 	}
 	return nil, nil
 }
 
 func (tm *TestModel) Update(r *http.Request) ([]byte, error) {
-	if tm.fail_db {
+	if tm.failDB {
 		return nil, errors.New("Database failed on purpose")
 	}
 	return nil, nil
 }
 
 func (tm *TestModel) Delete(r *http.Request) error {
-	if tm.fail_db {
+	if tm.failDB {
 		return errors.New("Database failed on purpose")
 	}
 	return nil
@@ -107,26 +107,26 @@ func TestInsert(t *testing.T) {
 		input    TestInput
 		expected int
 	}{
-		{NewTestInput(Scenario{url: url, body: vb, fail_db: false, fail_broker: false, nil_broker: false, nil_metrics: false}), http.StatusCreated},
-		{NewTestInput(Scenario{url: url, body: vb, fail_db: true, fail_broker: false, nil_broker: false, nil_metrics: false}), http.StatusInternalServerError},
-		{NewTestInput(Scenario{url: url, body: vb, fail_db: false, fail_broker: true, nil_broker: false, nil_metrics: false}), http.StatusInternalServerError},
-		{NewTestInput(Scenario{url: url, body: vb, fail_db: false, fail_broker: false, nil_broker: true, nil_metrics: false}), http.StatusCreated},
-		{NewTestInput(Scenario{url: url, body: vb, fail_db: false, fail_broker: false, nil_broker: false, nil_metrics: true}), http.StatusCreated},
-		{NewTestInput(Scenario{url: url, body: vb, fail_db: true, fail_broker: true, nil_broker: true, nil_metrics: true}), http.StatusInternalServerError},
-		{NewTestInput(Scenario{url: url, body: vb, fail_db: false, fail_broker: true, nil_broker: true, nil_metrics: true}), http.StatusCreated},
-		{NewTestInput(Scenario{url: url, body: vb, fail_db: true, fail_broker: false, nil_broker: true, nil_metrics: true}), http.StatusInternalServerError},
-		{NewTestInput(Scenario{url: url, body: vb, fail_db: true, fail_broker: true, nil_broker: false, nil_metrics: true}), http.StatusInternalServerError},
-		{NewTestInput(Scenario{url: url, body: vb, fail_db: true, fail_broker: true, nil_broker: true, nil_metrics: false}), http.StatusInternalServerError},
-		{NewTestInput(Scenario{url: url, body: ib, fail_db: false, fail_broker: false, nil_broker: false, nil_metrics: false}), http.StatusBadRequest},
-		{NewTestInput(Scenario{url: url, body: ib, fail_db: true, fail_broker: false, nil_broker: false, nil_metrics: false}), http.StatusBadRequest},
-		{NewTestInput(Scenario{url: url, body: ib, fail_db: false, fail_broker: true, nil_broker: false, nil_metrics: false}), http.StatusBadRequest},
-		{NewTestInput(Scenario{url: url, body: ib, fail_db: false, fail_broker: false, nil_broker: true, nil_metrics: false}), http.StatusBadRequest},
-		{NewTestInput(Scenario{url: url, body: ib, fail_db: false, fail_broker: false, nil_broker: false, nil_metrics: true}), http.StatusBadRequest},
-		{NewTestInput(Scenario{url: url, body: ib, fail_db: true, fail_broker: true, nil_broker: true, nil_metrics: true}), http.StatusBadRequest},
-		{NewTestInput(Scenario{url: url, body: ib, fail_db: false, fail_broker: true, nil_broker: true, nil_metrics: true}), http.StatusBadRequest},
-		{NewTestInput(Scenario{url: url, body: ib, fail_db: true, fail_broker: false, nil_broker: true, nil_metrics: true}), http.StatusBadRequest},
-		{NewTestInput(Scenario{url: url, body: ib, fail_db: true, fail_broker: true, nil_broker: false, nil_metrics: true}), http.StatusBadRequest},
-		{NewTestInput(Scenario{url: url, body: ib, fail_db: true, fail_broker: true, nil_broker: true, nil_metrics: false}), http.StatusBadRequest},
+		{NewTestInput(Scenario{url: url, body: vb, failDB: false, failBroker: false, nilBroker: false, nilMetrics: false}), http.StatusCreated},
+		{NewTestInput(Scenario{url: url, body: vb, failDB: true, failBroker: false, nilBroker: false, nilMetrics: false}), http.StatusInternalServerError},
+		{NewTestInput(Scenario{url: url, body: vb, failDB: false, failBroker: true, nilBroker: false, nilMetrics: false}), http.StatusInternalServerError},
+		{NewTestInput(Scenario{url: url, body: vb, failDB: false, failBroker: false, nilBroker: true, nilMetrics: false}), http.StatusCreated},
+		{NewTestInput(Scenario{url: url, body: vb, failDB: false, failBroker: false, nilBroker: false, nilMetrics: true}), http.StatusCreated},
+		{NewTestInput(Scenario{url: url, body: vb, failDB: true, failBroker: true, nilBroker: true, nilMetrics: true}), http.StatusInternalServerError},
+		{NewTestInput(Scenario{url: url, body: vb, failDB: false, failBroker: true, nilBroker: true, nilMetrics: true}), http.StatusCreated},
+		{NewTestInput(Scenario{url: url, body: vb, failDB: true, failBroker: false, nilBroker: true, nilMetrics: true}), http.StatusInternalServerError},
+		{NewTestInput(Scenario{url: url, body: vb, failDB: true, failBroker: true, nilBroker: false, nilMetrics: true}), http.StatusInternalServerError},
+		{NewTestInput(Scenario{url: url, body: vb, failDB: true, failBroker: true, nilBroker: true, nilMetrics: false}), http.StatusInternalServerError},
+		{NewTestInput(Scenario{url: url, body: ib, failDB: false, failBroker: false, nilBroker: false, nilMetrics: false}), http.StatusBadRequest},
+		{NewTestInput(Scenario{url: url, body: ib, failDB: true, failBroker: false, nilBroker: false, nilMetrics: false}), http.StatusBadRequest},
+		{NewTestInput(Scenario{url: url, body: ib, failDB: false, failBroker: true, nilBroker: false, nilMetrics: false}), http.StatusBadRequest},
+		{NewTestInput(Scenario{url: url, body: ib, failDB: false, failBroker: false, nilBroker: true, nilMetrics: false}), http.StatusBadRequest},
+		{NewTestInput(Scenario{url: url, body: ib, failDB: false, failBroker: false, nilBroker: false, nilMetrics: true}), http.StatusBadRequest},
+		{NewTestInput(Scenario{url: url, body: ib, failDB: true, failBroker: true, nilBroker: true, nilMetrics: true}), http.StatusBadRequest},
+		{NewTestInput(Scenario{url: url, body: ib, failDB: false, failBroker: true, nilBroker: true, nilMetrics: true}), http.StatusBadRequest},
+		{NewTestInput(Scenario{url: url, body: ib, failDB: true, failBroker: false, nilBroker: true, nilMetrics: true}), http.StatusBadRequest},
+		{NewTestInput(Scenario{url: url, body: ib, failDB: true, failBroker: true, nilBroker: false, nilMetrics: true}), http.StatusBadRequest},
+		{NewTestInput(Scenario{url: url, body: ib, failDB: true, failBroker: true, nilBroker: true, nilMetrics: false}), http.StatusBadRequest},
 	}
 	for _, test := range tests {
 		h := test.input.service.Insert("test", test.input.model)
@@ -141,12 +141,12 @@ func TestInsert(t *testing.T) {
 }
 
 func NewTestInput(scenario Scenario) TestInput {
-	model := &TestModel{fail_db: scenario.fail_db}
+	model := &TestModel{failDB: scenario.failDB}
 	service := Service{logger: MockLogger{}, metrics: nil, broker: nil}
-	if !scenario.nil_broker {
-		service.broker = MockBroker{fail: scenario.fail_broker}
+	if !scenario.nilBroker {
+		service.broker = MockBroker{fail: scenario.failBroker}
 	}
-	if !scenario.nil_metrics {
+	if !scenario.nilMetrics {
 		service.metrics = MockMetrics{}
 	}
 	return TestInput{scenario.url, scenario.body, model, service}
@@ -164,26 +164,26 @@ func TestUpdate(t *testing.T) {
 		input    TestInput
 		expected int
 	}{
-		{NewTestInput(Scenario{url: url, body: vb, fail_db: false, fail_broker: false, nil_broker: false, nil_metrics: false}), http.StatusNoContent},
-		{NewTestInput(Scenario{url: url, body: vb, fail_db: true, fail_broker: false, nil_broker: false, nil_metrics: false}), http.StatusInternalServerError},
-		{NewTestInput(Scenario{url: url, body: vb, fail_db: false, fail_broker: true, nil_broker: false, nil_metrics: false}), http.StatusInternalServerError},
-		{NewTestInput(Scenario{url: url, body: vb, fail_db: false, fail_broker: false, nil_broker: true, nil_metrics: false}), http.StatusNoContent},
-		{NewTestInput(Scenario{url: url, body: vb, fail_db: false, fail_broker: false, nil_broker: false, nil_metrics: true}), http.StatusNoContent},
-		{NewTestInput(Scenario{url: url, body: vb, fail_db: true, fail_broker: true, nil_broker: true, nil_metrics: true}), http.StatusInternalServerError},
-		{NewTestInput(Scenario{url: url, body: vb, fail_db: false, fail_broker: true, nil_broker: true, nil_metrics: true}), http.StatusNoContent},
-		{NewTestInput(Scenario{url: url, body: vb, fail_db: true, fail_broker: false, nil_broker: true, nil_metrics: true}), http.StatusInternalServerError},
-		{NewTestInput(Scenario{url: url, body: vb, fail_db: true, fail_broker: true, nil_broker: false, nil_metrics: true}), http.StatusInternalServerError},
-		{NewTestInput(Scenario{url: url, body: vb, fail_db: true, fail_broker: true, nil_broker: true, nil_metrics: false}), http.StatusInternalServerError},
-		{NewTestInput(Scenario{url: url, body: ib, fail_db: false, fail_broker: false, nil_broker: false, nil_metrics: false}), http.StatusBadRequest},
-		{NewTestInput(Scenario{url: url, body: ib, fail_db: true, fail_broker: false, nil_broker: false, nil_metrics: false}), http.StatusBadRequest},
-		{NewTestInput(Scenario{url: url, body: ib, fail_db: false, fail_broker: true, nil_broker: false, nil_metrics: false}), http.StatusBadRequest},
-		{NewTestInput(Scenario{url: url, body: ib, fail_db: false, fail_broker: false, nil_broker: true, nil_metrics: false}), http.StatusBadRequest},
-		{NewTestInput(Scenario{url: url, body: ib, fail_db: false, fail_broker: false, nil_broker: false, nil_metrics: true}), http.StatusBadRequest},
-		{NewTestInput(Scenario{url: url, body: ib, fail_db: true, fail_broker: true, nil_broker: true, nil_metrics: true}), http.StatusBadRequest},
-		{NewTestInput(Scenario{url: url, body: ib, fail_db: false, fail_broker: true, nil_broker: true, nil_metrics: true}), http.StatusBadRequest},
-		{NewTestInput(Scenario{url: url, body: ib, fail_db: true, fail_broker: false, nil_broker: true, nil_metrics: true}), http.StatusBadRequest},
-		{NewTestInput(Scenario{url: url, body: ib, fail_db: true, fail_broker: true, nil_broker: false, nil_metrics: true}), http.StatusBadRequest},
-		{NewTestInput(Scenario{url: url, body: ib, fail_db: true, fail_broker: true, nil_broker: true, nil_metrics: false}), http.StatusBadRequest},
+		{NewTestInput(Scenario{url: url, body: vb, failDB: false, failBroker: false, nilBroker: false, nilMetrics: false}), http.StatusNoContent},
+		{NewTestInput(Scenario{url: url, body: vb, failDB: true, failBroker: false, nilBroker: false, nilMetrics: false}), http.StatusInternalServerError},
+		{NewTestInput(Scenario{url: url, body: vb, failDB: false, failBroker: true, nilBroker: false, nilMetrics: false}), http.StatusInternalServerError},
+		{NewTestInput(Scenario{url: url, body: vb, failDB: false, failBroker: false, nilBroker: true, nilMetrics: false}), http.StatusNoContent},
+		{NewTestInput(Scenario{url: url, body: vb, failDB: false, failBroker: false, nilBroker: false, nilMetrics: true}), http.StatusNoContent},
+		{NewTestInput(Scenario{url: url, body: vb, failDB: true, failBroker: true, nilBroker: true, nilMetrics: true}), http.StatusInternalServerError},
+		{NewTestInput(Scenario{url: url, body: vb, failDB: false, failBroker: true, nilBroker: true, nilMetrics: true}), http.StatusNoContent},
+		{NewTestInput(Scenario{url: url, body: vb, failDB: true, failBroker: false, nilBroker: true, nilMetrics: true}), http.StatusInternalServerError},
+		{NewTestInput(Scenario{url: url, body: vb, failDB: true, failBroker: true, nilBroker: false, nilMetrics: true}), http.StatusInternalServerError},
+		{NewTestInput(Scenario{url: url, body: vb, failDB: true, failBroker: true, nilBroker: true, nilMetrics: false}), http.StatusInternalServerError},
+		{NewTestInput(Scenario{url: url, body: ib, failDB: false, failBroker: false, nilBroker: false, nilMetrics: false}), http.StatusBadRequest},
+		{NewTestInput(Scenario{url: url, body: ib, failDB: true, failBroker: false, nilBroker: false, nilMetrics: false}), http.StatusBadRequest},
+		{NewTestInput(Scenario{url: url, body: ib, failDB: false, failBroker: true, nilBroker: false, nilMetrics: false}), http.StatusBadRequest},
+		{NewTestInput(Scenario{url: url, body: ib, failDB: false, failBroker: false, nilBroker: true, nilMetrics: false}), http.StatusBadRequest},
+		{NewTestInput(Scenario{url: url, body: ib, failDB: false, failBroker: false, nilBroker: false, nilMetrics: true}), http.StatusBadRequest},
+		{NewTestInput(Scenario{url: url, body: ib, failDB: true, failBroker: true, nilBroker: true, nilMetrics: true}), http.StatusBadRequest},
+		{NewTestInput(Scenario{url: url, body: ib, failDB: false, failBroker: true, nilBroker: true, nilMetrics: true}), http.StatusBadRequest},
+		{NewTestInput(Scenario{url: url, body: ib, failDB: true, failBroker: false, nilBroker: true, nilMetrics: true}), http.StatusBadRequest},
+		{NewTestInput(Scenario{url: url, body: ib, failDB: true, failBroker: true, nilBroker: false, nilMetrics: true}), http.StatusBadRequest},
+		{NewTestInput(Scenario{url: url, body: ib, failDB: true, failBroker: true, nilBroker: true, nilMetrics: false}), http.StatusBadRequest},
 	}
 	for _, test := range tests {
 		h := test.input.service.Update("test", test.input.model)
@@ -204,26 +204,26 @@ func TestDelete(t *testing.T) {
 		input    TestInput
 		expected int
 	}{
-		{NewTestInput(Scenario{url: iurl, fail_db: false, fail_broker: false, nil_broker: false, nil_metrics: false}), http.StatusBadRequest},
-		{NewTestInput(Scenario{url: iurl, fail_db: true, fail_broker: false, nil_broker: false, nil_metrics: false}), http.StatusBadRequest},
-		{NewTestInput(Scenario{url: iurl, fail_db: false, fail_broker: true, nil_broker: false, nil_metrics: false}), http.StatusBadRequest},
-		{NewTestInput(Scenario{url: iurl, fail_db: false, fail_broker: false, nil_broker: true, nil_metrics: false}), http.StatusBadRequest},
-		{NewTestInput(Scenario{url: iurl, fail_db: false, fail_broker: false, nil_broker: false, nil_metrics: true}), http.StatusBadRequest},
-		{NewTestInput(Scenario{url: iurl, fail_db: true, fail_broker: true, nil_broker: true, nil_metrics: true}), http.StatusBadRequest},
-		{NewTestInput(Scenario{url: iurl, fail_db: false, fail_broker: true, nil_broker: true, nil_metrics: true}), http.StatusBadRequest},
-		{NewTestInput(Scenario{url: iurl, fail_db: true, fail_broker: false, nil_broker: true, nil_metrics: true}), http.StatusBadRequest},
-		{NewTestInput(Scenario{url: iurl, fail_db: true, fail_broker: true, nil_broker: false, nil_metrics: true}), http.StatusBadRequest},
-		{NewTestInput(Scenario{url: iurl, fail_db: true, fail_broker: true, nil_broker: true, nil_metrics: false}), http.StatusBadRequest},
-		{NewTestInput(Scenario{url: vurl, fail_db: false, fail_broker: false, nil_broker: false, nil_metrics: false}), http.StatusNoContent},
-		{NewTestInput(Scenario{url: vurl, fail_db: true, fail_broker: false, nil_broker: false, nil_metrics: false}), http.StatusInternalServerError},
-		{NewTestInput(Scenario{url: vurl, fail_db: false, fail_broker: true, nil_broker: false, nil_metrics: false}), http.StatusInternalServerError},
-		{NewTestInput(Scenario{url: vurl, fail_db: false, fail_broker: false, nil_broker: true, nil_metrics: false}), http.StatusNoContent},
-		{NewTestInput(Scenario{url: vurl, fail_db: false, fail_broker: false, nil_broker: false, nil_metrics: true}), http.StatusNoContent},
-		{NewTestInput(Scenario{url: vurl, fail_db: true, fail_broker: true, nil_broker: true, nil_metrics: true}), http.StatusInternalServerError},
-		{NewTestInput(Scenario{url: vurl, fail_db: false, fail_broker: true, nil_broker: true, nil_metrics: true}), http.StatusNoContent},
-		{NewTestInput(Scenario{url: vurl, fail_db: true, fail_broker: false, nil_broker: true, nil_metrics: true}), http.StatusInternalServerError},
-		{NewTestInput(Scenario{url: vurl, fail_db: true, fail_broker: true, nil_broker: false, nil_metrics: true}), http.StatusInternalServerError},
-		{NewTestInput(Scenario{url: vurl, fail_db: true, fail_broker: true, nil_broker: true, nil_metrics: false}), http.StatusInternalServerError},
+		{NewTestInput(Scenario{url: iurl, failDB: false, failBroker: false, nilBroker: false, nilMetrics: false}), http.StatusBadRequest},
+		{NewTestInput(Scenario{url: iurl, failDB: true, failBroker: false, nilBroker: false, nilMetrics: false}), http.StatusBadRequest},
+		{NewTestInput(Scenario{url: iurl, failDB: false, failBroker: true, nilBroker: false, nilMetrics: false}), http.StatusBadRequest},
+		{NewTestInput(Scenario{url: iurl, failDB: false, failBroker: false, nilBroker: true, nilMetrics: false}), http.StatusBadRequest},
+		{NewTestInput(Scenario{url: iurl, failDB: false, failBroker: false, nilBroker: false, nilMetrics: true}), http.StatusBadRequest},
+		{NewTestInput(Scenario{url: iurl, failDB: true, failBroker: true, nilBroker: true, nilMetrics: true}), http.StatusBadRequest},
+		{NewTestInput(Scenario{url: iurl, failDB: false, failBroker: true, nilBroker: true, nilMetrics: true}), http.StatusBadRequest},
+		{NewTestInput(Scenario{url: iurl, failDB: true, failBroker: false, nilBroker: true, nilMetrics: true}), http.StatusBadRequest},
+		{NewTestInput(Scenario{url: iurl, failDB: true, failBroker: true, nilBroker: false, nilMetrics: true}), http.StatusBadRequest},
+		{NewTestInput(Scenario{url: iurl, failDB: true, failBroker: true, nilBroker: true, nilMetrics: false}), http.StatusBadRequest},
+		{NewTestInput(Scenario{url: vurl, failDB: false, failBroker: false, nilBroker: false, nilMetrics: false}), http.StatusNoContent},
+		{NewTestInput(Scenario{url: vurl, failDB: true, failBroker: false, nilBroker: false, nilMetrics: false}), http.StatusInternalServerError},
+		{NewTestInput(Scenario{url: vurl, failDB: false, failBroker: true, nilBroker: false, nilMetrics: false}), http.StatusInternalServerError},
+		{NewTestInput(Scenario{url: vurl, failDB: false, failBroker: false, nilBroker: true, nilMetrics: false}), http.StatusNoContent},
+		{NewTestInput(Scenario{url: vurl, failDB: false, failBroker: false, nilBroker: false, nilMetrics: true}), http.StatusNoContent},
+		{NewTestInput(Scenario{url: vurl, failDB: true, failBroker: true, nilBroker: true, nilMetrics: true}), http.StatusInternalServerError},
+		{NewTestInput(Scenario{url: vurl, failDB: false, failBroker: true, nilBroker: true, nilMetrics: true}), http.StatusNoContent},
+		{NewTestInput(Scenario{url: vurl, failDB: true, failBroker: false, nilBroker: true, nilMetrics: true}), http.StatusInternalServerError},
+		{NewTestInput(Scenario{url: vurl, failDB: true, failBroker: true, nilBroker: false, nilMetrics: true}), http.StatusInternalServerError},
+		{NewTestInput(Scenario{url: vurl, failDB: true, failBroker: true, nilBroker: true, nilMetrics: false}), http.StatusInternalServerError},
 	}
 	for _, test := range tests {
 		h := test.input.service.Delete("test", test.input.model)
@@ -244,26 +244,26 @@ func TestFind(t *testing.T) {
 		input    TestInput
 		expected int
 	}{
-		{NewTestInput(Scenario{url: iurl, fail_db: false, fail_broker: false, nil_broker: false, nil_metrics: false}), http.StatusBadRequest},
-		{NewTestInput(Scenario{url: iurl, fail_db: true, fail_broker: false, nil_broker: false, nil_metrics: false}), http.StatusBadRequest},
-		{NewTestInput(Scenario{url: iurl, fail_db: false, fail_broker: true, nil_broker: false, nil_metrics: false}), http.StatusBadRequest},
-		{NewTestInput(Scenario{url: iurl, fail_db: false, fail_broker: false, nil_broker: true, nil_metrics: false}), http.StatusBadRequest},
-		{NewTestInput(Scenario{url: iurl, fail_db: false, fail_broker: false, nil_broker: false, nil_metrics: true}), http.StatusBadRequest},
-		{NewTestInput(Scenario{url: iurl, fail_db: true, fail_broker: true, nil_broker: true, nil_metrics: true}), http.StatusBadRequest},
-		{NewTestInput(Scenario{url: iurl, fail_db: false, fail_broker: true, nil_broker: true, nil_metrics: true}), http.StatusBadRequest},
-		{NewTestInput(Scenario{url: iurl, fail_db: true, fail_broker: false, nil_broker: true, nil_metrics: true}), http.StatusBadRequest},
-		{NewTestInput(Scenario{url: iurl, fail_db: true, fail_broker: true, nil_broker: false, nil_metrics: true}), http.StatusBadRequest},
-		{NewTestInput(Scenario{url: iurl, fail_db: true, fail_broker: true, nil_broker: true, nil_metrics: false}), http.StatusBadRequest},
-		{NewTestInput(Scenario{url: vurl, fail_db: false, fail_broker: false, nil_broker: false, nil_metrics: false}), http.StatusOK},
-		{NewTestInput(Scenario{url: vurl, fail_db: true, fail_broker: false, nil_broker: false, nil_metrics: false}), http.StatusInternalServerError},
-		{NewTestInput(Scenario{url: vurl, fail_db: false, fail_broker: true, nil_broker: false, nil_metrics: false}), http.StatusInternalServerError},
-		{NewTestInput(Scenario{url: vurl, fail_db: false, fail_broker: false, nil_broker: true, nil_metrics: false}), http.StatusOK},
-		{NewTestInput(Scenario{url: vurl, fail_db: false, fail_broker: false, nil_broker: false, nil_metrics: true}), http.StatusOK},
-		{NewTestInput(Scenario{url: vurl, fail_db: true, fail_broker: true, nil_broker: true, nil_metrics: true}), http.StatusInternalServerError},
-		{NewTestInput(Scenario{url: vurl, fail_db: false, fail_broker: true, nil_broker: true, nil_metrics: true}), http.StatusOK},
-		{NewTestInput(Scenario{url: vurl, fail_db: true, fail_broker: false, nil_broker: true, nil_metrics: true}), http.StatusInternalServerError},
-		{NewTestInput(Scenario{url: vurl, fail_db: true, fail_broker: true, nil_broker: false, nil_metrics: true}), http.StatusInternalServerError},
-		{NewTestInput(Scenario{url: vurl, fail_db: true, fail_broker: true, nil_broker: true, nil_metrics: false}), http.StatusInternalServerError},
+		{NewTestInput(Scenario{url: iurl, failDB: false, failBroker: false, nilBroker: false, nilMetrics: false}), http.StatusBadRequest},
+		{NewTestInput(Scenario{url: iurl, failDB: true, failBroker: false, nilBroker: false, nilMetrics: false}), http.StatusBadRequest},
+		{NewTestInput(Scenario{url: iurl, failDB: false, failBroker: true, nilBroker: false, nilMetrics: false}), http.StatusBadRequest},
+		{NewTestInput(Scenario{url: iurl, failDB: false, failBroker: false, nilBroker: true, nilMetrics: false}), http.StatusBadRequest},
+		{NewTestInput(Scenario{url: iurl, failDB: false, failBroker: false, nilBroker: false, nilMetrics: true}), http.StatusBadRequest},
+		{NewTestInput(Scenario{url: iurl, failDB: true, failBroker: true, nilBroker: true, nilMetrics: true}), http.StatusBadRequest},
+		{NewTestInput(Scenario{url: iurl, failDB: false, failBroker: true, nilBroker: true, nilMetrics: true}), http.StatusBadRequest},
+		{NewTestInput(Scenario{url: iurl, failDB: true, failBroker: false, nilBroker: true, nilMetrics: true}), http.StatusBadRequest},
+		{NewTestInput(Scenario{url: iurl, failDB: true, failBroker: true, nilBroker: false, nilMetrics: true}), http.StatusBadRequest},
+		{NewTestInput(Scenario{url: iurl, failDB: true, failBroker: true, nilBroker: true, nilMetrics: false}), http.StatusBadRequest},
+		{NewTestInput(Scenario{url: vurl, failDB: false, failBroker: false, nilBroker: false, nilMetrics: false}), http.StatusOK},
+		{NewTestInput(Scenario{url: vurl, failDB: true, failBroker: false, nilBroker: false, nilMetrics: false}), http.StatusInternalServerError},
+		{NewTestInput(Scenario{url: vurl, failDB: false, failBroker: true, nilBroker: false, nilMetrics: false}), http.StatusInternalServerError},
+		{NewTestInput(Scenario{url: vurl, failDB: false, failBroker: false, nilBroker: true, nilMetrics: false}), http.StatusOK},
+		{NewTestInput(Scenario{url: vurl, failDB: false, failBroker: false, nilBroker: false, nilMetrics: true}), http.StatusOK},
+		{NewTestInput(Scenario{url: vurl, failDB: true, failBroker: true, nilBroker: true, nilMetrics: true}), http.StatusInternalServerError},
+		{NewTestInput(Scenario{url: vurl, failDB: false, failBroker: true, nilBroker: true, nilMetrics: true}), http.StatusOK},
+		{NewTestInput(Scenario{url: vurl, failDB: true, failBroker: false, nilBroker: true, nilMetrics: true}), http.StatusInternalServerError},
+		{NewTestInput(Scenario{url: vurl, failDB: true, failBroker: true, nilBroker: false, nilMetrics: true}), http.StatusInternalServerError},
+		{NewTestInput(Scenario{url: vurl, failDB: true, failBroker: true, nilBroker: true, nilMetrics: false}), http.StatusInternalServerError},
 	}
 	for _, test := range tests {
 		h := test.input.service.Find("test", test.input.model)

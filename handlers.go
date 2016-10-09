@@ -183,6 +183,7 @@ func (service *Service) Update(name string, model Model) http.HandlerFunc {
 	}
 }
 
+// NewTimer creates a stop timer to track the performance of a function
 func (service *Service) NewTimer(stat string) func() {
 	// Allow metrics to be optional
 	if service.metrics == nil {
