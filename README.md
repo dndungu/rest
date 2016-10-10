@@ -5,10 +5,19 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/dndungu/rest)](https://goreportcard.com/report/github.com/dndungu/rest)
 [![Issue Count](https://codeclimate.com/github/dndungu/rest/badges/issue_count.svg)](https://codeclimate.com/github/dndungu/rest)
 
-REST is an opinionated library for quickly creating RESTful APIs.
+REST is an opinionated library for quickly creating RESTful micro services. It is built using lessons learned while architecting micro services systems.
 
-It allows one to use a database, events stream and metrics client of their choice.
+## Event driven architecture
+REST encourages using an event broker to send state changes between services.
 
-The library is opinionated in that it encourages tracking of metrics, logging and publishing the activities of the API to an event stream.
+## Metrics
+REST encourages tracking operations performance using
 
-It also defines a few interfaces designed to better structure the API service project.
+## Unit Testing
+REST encourages mocking database, metrics client, and event broker to allow for 100% test code coverage in your project.
+
+## Example
+
+```
+
+```
