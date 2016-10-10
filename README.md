@@ -11,7 +11,7 @@ REST is an opinionated library for quickly creating RESTful micro services. It i
 REST encourages using an event broker to send state changes between services.
 
 ## Metrics
-REST encourages tracking operations performance using
+REST encourages tracking function performance metrics.
 
 ## Unit Testing
 REST encourages mocking database, metrics client, and event broker to allow for 100% test code coverage in your project.
