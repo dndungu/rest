@@ -5,7 +5,7 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/dndungu/rest)](https://goreportcard.com/report/github.com/dndungu/rest)
 [![Issue Count](https://codeclimate.com/github/dndungu/rest/badges/issue_count.svg)](https://codeclimate.com/github/dndungu/rest)
 
-REST is an opinionated library for quickly creating RESTful JSON APIs.
+REST is an opinionated library for quickly creating RESTful APIs.
 
 It allows one to use a database, events stream and metrics client of their choice.
 
