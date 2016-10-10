@@ -19,7 +19,7 @@ func (service *Service) Insert(name string, model Model) http.HandlerFunc {
 		// Validate what came through the wire
 		err := model.Validate(r)
 		if err == nil {
-			body, err := model.Create(r)
+			body, err = model.Create(r)
 			if err == nil {
 				// Allow event broker to be optional
 				if service.broker != nil {
@@ -150,7 +150,7 @@ func (service *Service) Update(name string, model Model) http.HandlerFunc {
 		var body []byte
 		err := model.Validate(r)
 		if err == nil {
-			body, err := model.Update(r)
+			body, err = model.Update(r)
 			if err == nil {
 				// Notify other services, if an event broker exists
 				if service.broker != nil {
