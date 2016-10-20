@@ -10,7 +10,7 @@ import (
 	"testing"
 )
 
-type Scenario struct {
+type FakeScenario struct {
 	url        string
 	body       string
 	failDB     bool
@@ -47,101 +47,85 @@ func (mm MockMetrics) NewTimer(stat string) func() {
 	return func() {}
 }
 
-type TestModel struct {
-	failDB bool
-	Name   string `json:"name"`
-	Age    int    `json:"age"`
+type FakeModelFields struct {
+	Name string `json:"name"`
+	Age  int    `json:"age"`
 }
 
-func (tm *TestModel) Create(r *http.Request) ([]byte, error) {
-	if tm.failDB {
-		return nil, errors.New("Database failed on purpose")
-	}
-	return nil, nil
+type FakeModel struct {
+	request *http.Request
+	FakeStorage
+	FakeIdentity
+	Fields FakeModelFields
+	items  []FakeModelFields
 }
 
-func (tm *TestModel) Validate(r *http.Request) error {
-	if strings.Compare(r.Method, "DELETE") == 0 || strings.Compare(r.Method, "GET") == 0 {
-		if strings.Compare(r.URL.Path, "/test/1") != 0 {
+type FakeIdentity struct {
+	name string
+}
+
+func (fi *FakeIdentity) Name() string {
+	return fi.name
+}
+
+func (fm *FakeModel) Validate() error {
+	method := fm.request.Method
+	if strings.Compare(method, "DELETE") == 0 || strings.Compare(method, "GET") == 0 {
+		path := fm.request.URL.Path
+		if strings.Compare(path, "/test/1") != 0 {
 			return errors.New("Invalid URL parameter")
 		}
 		return nil
 	}
-	decoder := json.NewDecoder(r.Body)
-	return decoder.Decode(tm)
-}
-
-func (tm *TestModel) Find(r *http.Request) ([]byte, error) {
-	if tm.failDB {
-		return nil, errors.New("Database failed on purpose")
-	}
-	return nil, nil
-}
-
-func (tm *TestModel) Update(r *http.Request) ([]byte, error) {
-	if tm.failDB {
-		return nil, errors.New("Database failed on purpose")
-	}
-	return nil, nil
-}
-
-func (tm *TestModel) Delete(r *http.Request) error {
-	if tm.failDB {
-		return errors.New("Database failed on purpose")
-	}
 	return nil
 }
 
-type TestInput struct {
-	url     string
-	body    string
-	model   *TestModel
-	service Service
+func (fm *FakeModel) Decode() error {
+	fm.items = []FakeModelFields{FakeModelFields{}}
+	decoder := json.NewDecoder(fm.request.Body)
+	return decoder.Decode(&fm.items[0])
 }
 
-func TestInsert(t *testing.T) {
-	vb := `{"name": "Otieno Kamau", "age": 21}`
-	ib := "name=Bad Name"
-	url := "http://foo.bar/test"
-	tests := []struct {
-		input    TestInput
-		expected int
-	}{
-		{NewTestInput(Scenario{url: url, body: vb, failDB: false, failBroker: false, nilBroker: false, nilMetrics: false}), http.StatusCreated},
-		{NewTestInput(Scenario{url: url, body: vb, failDB: true, failBroker: false, nilBroker: false, nilMetrics: false}), http.StatusInternalServerError},
-		{NewTestInput(Scenario{url: url, body: vb, failDB: false, failBroker: true, nilBroker: false, nilMetrics: false}), http.StatusInternalServerError},
-		{NewTestInput(Scenario{url: url, body: vb, failDB: false, failBroker: false, nilBroker: true, nilMetrics: false}), http.StatusCreated},
-		{NewTestInput(Scenario{url: url, body: vb, failDB: false, failBroker: false, nilBroker: false, nilMetrics: true}), http.StatusCreated},
-		{NewTestInput(Scenario{url: url, body: vb, failDB: true, failBroker: true, nilBroker: true, nilMetrics: true}), http.StatusInternalServerError},
-		{NewTestInput(Scenario{url: url, body: vb, failDB: false, failBroker: true, nilBroker: true, nilMetrics: true}), http.StatusCreated},
-		{NewTestInput(Scenario{url: url, body: vb, failDB: true, failBroker: false, nilBroker: true, nilMetrics: true}), http.StatusInternalServerError},
-		{NewTestInput(Scenario{url: url, body: vb, failDB: true, failBroker: true, nilBroker: false, nilMetrics: true}), http.StatusInternalServerError},
-		{NewTestInput(Scenario{url: url, body: vb, failDB: true, failBroker: true, nilBroker: true, nilMetrics: false}), http.StatusInternalServerError},
-		{NewTestInput(Scenario{url: url, body: ib, failDB: false, failBroker: false, nilBroker: false, nilMetrics: false}), http.StatusBadRequest},
-		{NewTestInput(Scenario{url: url, body: ib, failDB: true, failBroker: false, nilBroker: false, nilMetrics: false}), http.StatusBadRequest},
-		{NewTestInput(Scenario{url: url, body: ib, failDB: false, failBroker: true, nilBroker: false, nilMetrics: false}), http.StatusBadRequest},
-		{NewTestInput(Scenario{url: url, body: ib, failDB: false, failBroker: false, nilBroker: true, nilMetrics: false}), http.StatusBadRequest},
-		{NewTestInput(Scenario{url: url, body: ib, failDB: false, failBroker: false, nilBroker: false, nilMetrics: true}), http.StatusBadRequest},
-		{NewTestInput(Scenario{url: url, body: ib, failDB: true, failBroker: true, nilBroker: true, nilMetrics: true}), http.StatusBadRequest},
-		{NewTestInput(Scenario{url: url, body: ib, failDB: false, failBroker: true, nilBroker: true, nilMetrics: true}), http.StatusBadRequest},
-		{NewTestInput(Scenario{url: url, body: ib, failDB: true, failBroker: false, nilBroker: true, nilMetrics: true}), http.StatusBadRequest},
-		{NewTestInput(Scenario{url: url, body: ib, failDB: true, failBroker: true, nilBroker: false, nilMetrics: true}), http.StatusBadRequest},
-		{NewTestInput(Scenario{url: url, body: ib, failDB: true, failBroker: true, nilBroker: true, nilMetrics: false}), http.StatusBadRequest},
-	}
-	for _, test := range tests {
-		h := test.input.service.Insert("test", test.input.model)
-		w := httptest.NewRecorder()
-		r := NewTestRequest("POST", test.input.url, test.input.body)
-		h(w, r)
-		actual := w.Code
-		if actual != test.expected {
-			t.Errorf("Error, expected %d, got %d for request body: %s", test.expected, actual, test.input.body)
-		}
-	}
+func (fm *FakeModel) Encode(v interface{}) ([]byte, error) {
+	return nil, nil
 }
 
-func NewTestInput(scenario Scenario) TestInput {
-	model := &TestModel{failDB: scenario.failDB}
+type FakeMessage struct {
+	message string
+}
+
+type FakeStorage struct {
+	fail bool
+}
+
+func (fs *FakeStorage) Create() (interface{}, error) {
+	return fs.FakeAction()
+}
+
+func (fs *FakeStorage) Find() (interface{}, error) {
+	return fs.FakeAction()
+}
+
+func (fs *FakeStorage) Update() (interface{}, error) {
+	return fs.FakeAction()
+}
+
+func (fs *FakeStorage) Remove() (interface{}, error) {
+	return fs.FakeAction()
+}
+
+func (fs *FakeStorage) Upsert() (interface{}, error) {
+	return fs.FakeAction()
+}
+
+func (fs *FakeStorage) FakeAction() (interface{}, error) {
+	if fs.fail {
+		return nil, errors.New("Database failed on purpose")
+	}
+	return nil, nil
+}
+
+func NewFakeService(scenario FakeScenario) *Service {
 	service := Service{logger: MockLogger{}, metrics: nil, broker: nil}
 	if !scenario.nilBroker {
 		service.broker = MockBroker{fail: scenario.failBroker}
@@ -149,11 +133,62 @@ func NewTestInput(scenario Scenario) TestInput {
 	if !scenario.nilMetrics {
 		service.metrics = MockMetrics{}
 	}
-	return TestInput{scenario.url, scenario.body, model, service}
+	return &service
 }
 
 func NewTestRequest(verb, url, input string) *http.Request {
 	return httptest.NewRequest(verb, url, bytes.NewBufferString(input))
+}
+
+type FakeModelFactory struct {
+	fail bool
+}
+
+func (fmf FakeModelFactory) New(r *http.Request) Model {
+	return &FakeModel{request: r, FakeStorage: FakeStorage{fail: fmf.fail}}
+}
+
+func TestInsert(t *testing.T) {
+	vb := `{"name": "Otieno Kamau", "age": 21}`
+	ib := "name=Bad Name"
+	url := "http://foo.bar/test"
+	tests := []struct {
+		scenario FakeScenario
+		expected int
+	}{
+		{FakeScenario{url: url, body: vb, failDB: false, failBroker: false, nilBroker: false, nilMetrics: false}, http.StatusCreated},
+		{FakeScenario{url: url, body: vb, failDB: true, failBroker: false, nilBroker: false, nilMetrics: false}, http.StatusInternalServerError},
+		{FakeScenario{url: url, body: vb, failDB: false, failBroker: true, nilBroker: false, nilMetrics: false}, http.StatusInternalServerError},
+		{FakeScenario{url: url, body: vb, failDB: false, failBroker: false, nilBroker: true, nilMetrics: false}, http.StatusCreated},
+		{FakeScenario{url: url, body: vb, failDB: false, failBroker: false, nilBroker: false, nilMetrics: true}, http.StatusCreated},
+		{FakeScenario{url: url, body: vb, failDB: true, failBroker: true, nilBroker: true, nilMetrics: true}, http.StatusInternalServerError},
+		{FakeScenario{url: url, body: vb, failDB: false, failBroker: true, nilBroker: true, nilMetrics: true}, http.StatusCreated},
+		{FakeScenario{url: url, body: vb, failDB: true, failBroker: false, nilBroker: true, nilMetrics: true}, http.StatusInternalServerError},
+		{FakeScenario{url: url, body: vb, failDB: true, failBroker: true, nilBroker: false, nilMetrics: true}, http.StatusInternalServerError},
+		{FakeScenario{url: url, body: vb, failDB: true, failBroker: true, nilBroker: true, nilMetrics: false}, http.StatusInternalServerError},
+		{FakeScenario{url: url, body: ib, failDB: false, failBroker: false, nilBroker: false, nilMetrics: false}, http.StatusBadRequest},
+		{FakeScenario{url: url, body: ib, failDB: true, failBroker: false, nilBroker: false, nilMetrics: false}, http.StatusBadRequest},
+		{FakeScenario{url: url, body: ib, failDB: false, failBroker: true, nilBroker: false, nilMetrics: false}, http.StatusBadRequest},
+		{FakeScenario{url: url, body: ib, failDB: false, failBroker: false, nilBroker: true, nilMetrics: false}, http.StatusBadRequest},
+		{FakeScenario{url: url, body: ib, failDB: false, failBroker: false, nilBroker: false, nilMetrics: true}, http.StatusBadRequest},
+		{FakeScenario{url: url, body: ib, failDB: true, failBroker: true, nilBroker: true, nilMetrics: true}, http.StatusBadRequest},
+		{FakeScenario{url: url, body: ib, failDB: false, failBroker: true, nilBroker: true, nilMetrics: true}, http.StatusBadRequest},
+		{FakeScenario{url: url, body: ib, failDB: true, failBroker: false, nilBroker: true, nilMetrics: true}, http.StatusBadRequest},
+		{FakeScenario{url: url, body: ib, failDB: true, failBroker: true, nilBroker: false, nilMetrics: true}, http.StatusBadRequest},
+		{FakeScenario{url: url, body: ib, failDB: true, failBroker: true, nilBroker: true, nilMetrics: false}, http.StatusBadRequest},
+	}
+	for _, test := range tests {
+		service := NewFakeService(test.scenario)
+		mf := FakeModelFactory{fail: test.scenario.failDB}
+		h := service.Insert(mf)
+		w := httptest.NewRecorder()
+		r := NewTestRequest("POST", test.scenario.url, test.scenario.body)
+		h(w, r)
+		actual := w.Code
+		if actual != test.expected {
+			t.Errorf("Error, expected %d, got %d for request body: %s", test.expected, actual, test.scenario.body)
+		}
+	}
 }
 
 func TestUpdate(t *testing.T) {
@@ -161,78 +196,82 @@ func TestUpdate(t *testing.T) {
 	ib := "name=Bad Name"
 	url := "http://foo.bar/test/1"
 	tests := []struct {
-		input    TestInput
+		scenario FakeScenario
 		expected int
 	}{
-		{NewTestInput(Scenario{url: url, body: vb, failDB: false, failBroker: false, nilBroker: false, nilMetrics: false}), http.StatusNoContent},
-		{NewTestInput(Scenario{url: url, body: vb, failDB: true, failBroker: false, nilBroker: false, nilMetrics: false}), http.StatusInternalServerError},
-		{NewTestInput(Scenario{url: url, body: vb, failDB: false, failBroker: true, nilBroker: false, nilMetrics: false}), http.StatusInternalServerError},
-		{NewTestInput(Scenario{url: url, body: vb, failDB: false, failBroker: false, nilBroker: true, nilMetrics: false}), http.StatusNoContent},
-		{NewTestInput(Scenario{url: url, body: vb, failDB: false, failBroker: false, nilBroker: false, nilMetrics: true}), http.StatusNoContent},
-		{NewTestInput(Scenario{url: url, body: vb, failDB: true, failBroker: true, nilBroker: true, nilMetrics: true}), http.StatusInternalServerError},
-		{NewTestInput(Scenario{url: url, body: vb, failDB: false, failBroker: true, nilBroker: true, nilMetrics: true}), http.StatusNoContent},
-		{NewTestInput(Scenario{url: url, body: vb, failDB: true, failBroker: false, nilBroker: true, nilMetrics: true}), http.StatusInternalServerError},
-		{NewTestInput(Scenario{url: url, body: vb, failDB: true, failBroker: true, nilBroker: false, nilMetrics: true}), http.StatusInternalServerError},
-		{NewTestInput(Scenario{url: url, body: vb, failDB: true, failBroker: true, nilBroker: true, nilMetrics: false}), http.StatusInternalServerError},
-		{NewTestInput(Scenario{url: url, body: ib, failDB: false, failBroker: false, nilBroker: false, nilMetrics: false}), http.StatusBadRequest},
-		{NewTestInput(Scenario{url: url, body: ib, failDB: true, failBroker: false, nilBroker: false, nilMetrics: false}), http.StatusBadRequest},
-		{NewTestInput(Scenario{url: url, body: ib, failDB: false, failBroker: true, nilBroker: false, nilMetrics: false}), http.StatusBadRequest},
-		{NewTestInput(Scenario{url: url, body: ib, failDB: false, failBroker: false, nilBroker: true, nilMetrics: false}), http.StatusBadRequest},
-		{NewTestInput(Scenario{url: url, body: ib, failDB: false, failBroker: false, nilBroker: false, nilMetrics: true}), http.StatusBadRequest},
-		{NewTestInput(Scenario{url: url, body: ib, failDB: true, failBroker: true, nilBroker: true, nilMetrics: true}), http.StatusBadRequest},
-		{NewTestInput(Scenario{url: url, body: ib, failDB: false, failBroker: true, nilBroker: true, nilMetrics: true}), http.StatusBadRequest},
-		{NewTestInput(Scenario{url: url, body: ib, failDB: true, failBroker: false, nilBroker: true, nilMetrics: true}), http.StatusBadRequest},
-		{NewTestInput(Scenario{url: url, body: ib, failDB: true, failBroker: true, nilBroker: false, nilMetrics: true}), http.StatusBadRequest},
-		{NewTestInput(Scenario{url: url, body: ib, failDB: true, failBroker: true, nilBroker: true, nilMetrics: false}), http.StatusBadRequest},
+		{FakeScenario{url: url, body: vb, failDB: false, failBroker: false, nilBroker: false, nilMetrics: false}, http.StatusNoContent},
+		{FakeScenario{url: url, body: vb, failDB: true, failBroker: false, nilBroker: false, nilMetrics: false}, http.StatusInternalServerError},
+		{FakeScenario{url: url, body: vb, failDB: false, failBroker: true, nilBroker: false, nilMetrics: false}, http.StatusInternalServerError},
+		{FakeScenario{url: url, body: vb, failDB: false, failBroker: false, nilBroker: true, nilMetrics: false}, http.StatusNoContent},
+		{FakeScenario{url: url, body: vb, failDB: false, failBroker: false, nilBroker: false, nilMetrics: true}, http.StatusNoContent},
+		{FakeScenario{url: url, body: vb, failDB: true, failBroker: true, nilBroker: true, nilMetrics: true}, http.StatusInternalServerError},
+		{FakeScenario{url: url, body: vb, failDB: false, failBroker: true, nilBroker: true, nilMetrics: true}, http.StatusNoContent},
+		{FakeScenario{url: url, body: vb, failDB: true, failBroker: false, nilBroker: true, nilMetrics: true}, http.StatusInternalServerError},
+		{FakeScenario{url: url, body: vb, failDB: true, failBroker: true, nilBroker: false, nilMetrics: true}, http.StatusInternalServerError},
+		{FakeScenario{url: url, body: vb, failDB: true, failBroker: true, nilBroker: true, nilMetrics: false}, http.StatusInternalServerError},
+		{FakeScenario{url: url, body: ib, failDB: false, failBroker: false, nilBroker: false, nilMetrics: false}, http.StatusBadRequest},
+		{FakeScenario{url: url, body: ib, failDB: true, failBroker: false, nilBroker: false, nilMetrics: false}, http.StatusBadRequest},
+		{FakeScenario{url: url, body: ib, failDB: false, failBroker: true, nilBroker: false, nilMetrics: false}, http.StatusBadRequest},
+		{FakeScenario{url: url, body: ib, failDB: false, failBroker: false, nilBroker: true, nilMetrics: false}, http.StatusBadRequest},
+		{FakeScenario{url: url, body: ib, failDB: false, failBroker: false, nilBroker: false, nilMetrics: true}, http.StatusBadRequest},
+		{FakeScenario{url: url, body: ib, failDB: true, failBroker: true, nilBroker: true, nilMetrics: true}, http.StatusBadRequest},
+		{FakeScenario{url: url, body: ib, failDB: false, failBroker: true, nilBroker: true, nilMetrics: true}, http.StatusBadRequest},
+		{FakeScenario{url: url, body: ib, failDB: true, failBroker: false, nilBroker: true, nilMetrics: true}, http.StatusBadRequest},
+		{FakeScenario{url: url, body: ib, failDB: true, failBroker: true, nilBroker: false, nilMetrics: true}, http.StatusBadRequest},
+		{FakeScenario{url: url, body: ib, failDB: true, failBroker: true, nilBroker: true, nilMetrics: false}, http.StatusBadRequest},
 	}
 	for _, test := range tests {
-		h := test.input.service.Update("test", test.input.model)
+		mf := FakeModelFactory{fail: test.scenario.failDB}
+		service := NewFakeService(test.scenario)
+		h := service.Update(mf)
 		w := httptest.NewRecorder()
-		r := NewTestRequest("PUT", test.input.url, test.input.body)
+		r := NewTestRequest("PUT", test.scenario.url, test.scenario.body)
 		h(w, r)
 		actual := w.Code
 		if actual != test.expected {
-			t.Errorf("Error, expected %d, got %d for request body: %s", test.expected, actual, test.input.body)
+			t.Errorf("Error, expected %d, got %d for request body: %s", test.expected, actual, test.scenario.body)
 		}
 	}
 }
 
-func TestDelete(t *testing.T) {
+func TestRemove(t *testing.T) {
 	vurl := "http://foo.bar/test/1"
 	iurl := "http://foo.bar/test"
 	tests := []struct {
-		input    TestInput
+		scenario FakeScenario
 		expected int
 	}{
-		{NewTestInput(Scenario{url: iurl, failDB: false, failBroker: false, nilBroker: false, nilMetrics: false}), http.StatusBadRequest},
-		{NewTestInput(Scenario{url: iurl, failDB: true, failBroker: false, nilBroker: false, nilMetrics: false}), http.StatusBadRequest},
-		{NewTestInput(Scenario{url: iurl, failDB: false, failBroker: true, nilBroker: false, nilMetrics: false}), http.StatusBadRequest},
-		{NewTestInput(Scenario{url: iurl, failDB: false, failBroker: false, nilBroker: true, nilMetrics: false}), http.StatusBadRequest},
-		{NewTestInput(Scenario{url: iurl, failDB: false, failBroker: false, nilBroker: false, nilMetrics: true}), http.StatusBadRequest},
-		{NewTestInput(Scenario{url: iurl, failDB: true, failBroker: true, nilBroker: true, nilMetrics: true}), http.StatusBadRequest},
-		{NewTestInput(Scenario{url: iurl, failDB: false, failBroker: true, nilBroker: true, nilMetrics: true}), http.StatusBadRequest},
-		{NewTestInput(Scenario{url: iurl, failDB: true, failBroker: false, nilBroker: true, nilMetrics: true}), http.StatusBadRequest},
-		{NewTestInput(Scenario{url: iurl, failDB: true, failBroker: true, nilBroker: false, nilMetrics: true}), http.StatusBadRequest},
-		{NewTestInput(Scenario{url: iurl, failDB: true, failBroker: true, nilBroker: true, nilMetrics: false}), http.StatusBadRequest},
-		{NewTestInput(Scenario{url: vurl, failDB: false, failBroker: false, nilBroker: false, nilMetrics: false}), http.StatusNoContent},
-		{NewTestInput(Scenario{url: vurl, failDB: true, failBroker: false, nilBroker: false, nilMetrics: false}), http.StatusInternalServerError},
-		{NewTestInput(Scenario{url: vurl, failDB: false, failBroker: true, nilBroker: false, nilMetrics: false}), http.StatusInternalServerError},
-		{NewTestInput(Scenario{url: vurl, failDB: false, failBroker: false, nilBroker: true, nilMetrics: false}), http.StatusNoContent},
-		{NewTestInput(Scenario{url: vurl, failDB: false, failBroker: false, nilBroker: false, nilMetrics: true}), http.StatusNoContent},
-		{NewTestInput(Scenario{url: vurl, failDB: true, failBroker: true, nilBroker: true, nilMetrics: true}), http.StatusInternalServerError},
-		{NewTestInput(Scenario{url: vurl, failDB: false, failBroker: true, nilBroker: true, nilMetrics: true}), http.StatusNoContent},
-		{NewTestInput(Scenario{url: vurl, failDB: true, failBroker: false, nilBroker: true, nilMetrics: true}), http.StatusInternalServerError},
-		{NewTestInput(Scenario{url: vurl, failDB: true, failBroker: true, nilBroker: false, nilMetrics: true}), http.StatusInternalServerError},
-		{NewTestInput(Scenario{url: vurl, failDB: true, failBroker: true, nilBroker: true, nilMetrics: false}), http.StatusInternalServerError},
+		{FakeScenario{url: iurl, failDB: false, failBroker: false, nilBroker: false, nilMetrics: false}, http.StatusBadRequest},
+		{FakeScenario{url: iurl, failDB: true, failBroker: false, nilBroker: false, nilMetrics: false}, http.StatusBadRequest},
+		{FakeScenario{url: iurl, failDB: false, failBroker: true, nilBroker: false, nilMetrics: false}, http.StatusBadRequest},
+		{FakeScenario{url: iurl, failDB: false, failBroker: false, nilBroker: true, nilMetrics: false}, http.StatusBadRequest},
+		{FakeScenario{url: iurl, failDB: false, failBroker: false, nilBroker: false, nilMetrics: true}, http.StatusBadRequest},
+		{FakeScenario{url: iurl, failDB: true, failBroker: true, nilBroker: true, nilMetrics: true}, http.StatusBadRequest},
+		{FakeScenario{url: iurl, failDB: false, failBroker: true, nilBroker: true, nilMetrics: true}, http.StatusBadRequest},
+		{FakeScenario{url: iurl, failDB: true, failBroker: false, nilBroker: true, nilMetrics: true}, http.StatusBadRequest},
+		{FakeScenario{url: iurl, failDB: true, failBroker: true, nilBroker: false, nilMetrics: true}, http.StatusBadRequest},
+		{FakeScenario{url: iurl, failDB: true, failBroker: true, nilBroker: true, nilMetrics: false}, http.StatusBadRequest},
+		{FakeScenario{url: vurl, failDB: false, failBroker: false, nilBroker: false, nilMetrics: false}, http.StatusNoContent},
+		{FakeScenario{url: vurl, failDB: true, failBroker: false, nilBroker: false, nilMetrics: false}, http.StatusInternalServerError},
+		{FakeScenario{url: vurl, failDB: false, failBroker: true, nilBroker: false, nilMetrics: false}, http.StatusInternalServerError},
+		{FakeScenario{url: vurl, failDB: false, failBroker: false, nilBroker: true, nilMetrics: false}, http.StatusNoContent},
+		{FakeScenario{url: vurl, failDB: false, failBroker: false, nilBroker: false, nilMetrics: true}, http.StatusNoContent},
+		{FakeScenario{url: vurl, failDB: true, failBroker: true, nilBroker: true, nilMetrics: true}, http.StatusInternalServerError},
+		{FakeScenario{url: vurl, failDB: false, failBroker: true, nilBroker: true, nilMetrics: true}, http.StatusNoContent},
+		{FakeScenario{url: vurl, failDB: true, failBroker: false, nilBroker: true, nilMetrics: true}, http.StatusInternalServerError},
+		{FakeScenario{url: vurl, failDB: true, failBroker: true, nilBroker: false, nilMetrics: true}, http.StatusInternalServerError},
+		{FakeScenario{url: vurl, failDB: true, failBroker: true, nilBroker: true, nilMetrics: false}, http.StatusInternalServerError},
 	}
 	for _, test := range tests {
-		h := test.input.service.Delete("test", test.input.model)
+		mf := FakeModelFactory{fail: test.scenario.failDB}
+		service := NewFakeService(test.scenario)
+		h := service.Remove(mf)
 		w := httptest.NewRecorder()
-		r := NewTestRequest("DELETE", test.input.url, test.input.body)
+		r := NewTestRequest("DELETE", test.scenario.url, test.scenario.body)
 		h(w, r)
 		actual := w.Code
 		if actual != test.expected {
-			t.Errorf("Error, expected %d, got %d using URL: %s", test.expected, actual, test.input.url)
+			t.Errorf("Error, expected %d, got %d using URL: %s", test.expected, actual, test.scenario.url)
 		}
 	}
 }
@@ -241,39 +280,41 @@ func TestFind(t *testing.T) {
 	vurl := "http://foo.bar/test/1"
 	iurl := "http://foo.bar/test/bad-id-format"
 	tests := []struct {
-		input    TestInput
+		scenario FakeScenario
 		expected int
 	}{
-		{NewTestInput(Scenario{url: iurl, failDB: false, failBroker: false, nilBroker: false, nilMetrics: false}), http.StatusBadRequest},
-		{NewTestInput(Scenario{url: iurl, failDB: true, failBroker: false, nilBroker: false, nilMetrics: false}), http.StatusBadRequest},
-		{NewTestInput(Scenario{url: iurl, failDB: false, failBroker: true, nilBroker: false, nilMetrics: false}), http.StatusBadRequest},
-		{NewTestInput(Scenario{url: iurl, failDB: false, failBroker: false, nilBroker: true, nilMetrics: false}), http.StatusBadRequest},
-		{NewTestInput(Scenario{url: iurl, failDB: false, failBroker: false, nilBroker: false, nilMetrics: true}), http.StatusBadRequest},
-		{NewTestInput(Scenario{url: iurl, failDB: true, failBroker: true, nilBroker: true, nilMetrics: true}), http.StatusBadRequest},
-		{NewTestInput(Scenario{url: iurl, failDB: false, failBroker: true, nilBroker: true, nilMetrics: true}), http.StatusBadRequest},
-		{NewTestInput(Scenario{url: iurl, failDB: true, failBroker: false, nilBroker: true, nilMetrics: true}), http.StatusBadRequest},
-		{NewTestInput(Scenario{url: iurl, failDB: true, failBroker: true, nilBroker: false, nilMetrics: true}), http.StatusBadRequest},
-		{NewTestInput(Scenario{url: iurl, failDB: true, failBroker: true, nilBroker: true, nilMetrics: false}), http.StatusBadRequest},
-		{NewTestInput(Scenario{url: vurl, failDB: false, failBroker: false, nilBroker: false, nilMetrics: false}), http.StatusOK},
-		{NewTestInput(Scenario{url: vurl, failDB: true, failBroker: false, nilBroker: false, nilMetrics: false}), http.StatusInternalServerError},
-		{NewTestInput(Scenario{url: vurl, failDB: false, failBroker: true, nilBroker: false, nilMetrics: false}), http.StatusInternalServerError},
-		{NewTestInput(Scenario{url: vurl, failDB: false, failBroker: false, nilBroker: true, nilMetrics: false}), http.StatusOK},
-		{NewTestInput(Scenario{url: vurl, failDB: false, failBroker: false, nilBroker: false, nilMetrics: true}), http.StatusOK},
-		{NewTestInput(Scenario{url: vurl, failDB: true, failBroker: true, nilBroker: true, nilMetrics: true}), http.StatusInternalServerError},
-		{NewTestInput(Scenario{url: vurl, failDB: false, failBroker: true, nilBroker: true, nilMetrics: true}), http.StatusOK},
-		{NewTestInput(Scenario{url: vurl, failDB: true, failBroker: false, nilBroker: true, nilMetrics: true}), http.StatusInternalServerError},
-		{NewTestInput(Scenario{url: vurl, failDB: true, failBroker: true, nilBroker: false, nilMetrics: true}), http.StatusInternalServerError},
-		{NewTestInput(Scenario{url: vurl, failDB: true, failBroker: true, nilBroker: true, nilMetrics: false}), http.StatusInternalServerError},
+		{FakeScenario{url: iurl, failDB: false, failBroker: false, nilBroker: false, nilMetrics: false}, http.StatusBadRequest},
+		{FakeScenario{url: iurl, failDB: true, failBroker: false, nilBroker: false, nilMetrics: false}, http.StatusBadRequest},
+		{FakeScenario{url: iurl, failDB: false, failBroker: true, nilBroker: false, nilMetrics: false}, http.StatusBadRequest},
+		{FakeScenario{url: iurl, failDB: false, failBroker: false, nilBroker: true, nilMetrics: false}, http.StatusBadRequest},
+		{FakeScenario{url: iurl, failDB: false, failBroker: false, nilBroker: false, nilMetrics: true}, http.StatusBadRequest},
+		{FakeScenario{url: iurl, failDB: true, failBroker: true, nilBroker: true, nilMetrics: true}, http.StatusBadRequest},
+		{FakeScenario{url: iurl, failDB: false, failBroker: true, nilBroker: true, nilMetrics: true}, http.StatusBadRequest},
+		{FakeScenario{url: iurl, failDB: true, failBroker: false, nilBroker: true, nilMetrics: true}, http.StatusBadRequest},
+		{FakeScenario{url: iurl, failDB: true, failBroker: true, nilBroker: false, nilMetrics: true}, http.StatusBadRequest},
+		{FakeScenario{url: iurl, failDB: true, failBroker: true, nilBroker: true, nilMetrics: false}, http.StatusBadRequest},
+		{FakeScenario{url: vurl, failDB: false, failBroker: false, nilBroker: false, nilMetrics: false}, http.StatusOK},
+		{FakeScenario{url: vurl, failDB: true, failBroker: false, nilBroker: false, nilMetrics: false}, http.StatusInternalServerError},
+		{FakeScenario{url: vurl, failDB: false, failBroker: true, nilBroker: false, nilMetrics: false}, http.StatusInternalServerError},
+		{FakeScenario{url: vurl, failDB: false, failBroker: false, nilBroker: true, nilMetrics: false}, http.StatusOK},
+		{FakeScenario{url: vurl, failDB: false, failBroker: false, nilBroker: false, nilMetrics: true}, http.StatusOK},
+		{FakeScenario{url: vurl, failDB: true, failBroker: true, nilBroker: true, nilMetrics: true}, http.StatusInternalServerError},
+		{FakeScenario{url: vurl, failDB: false, failBroker: true, nilBroker: true, nilMetrics: true}, http.StatusOK},
+		{FakeScenario{url: vurl, failDB: true, failBroker: false, nilBroker: true, nilMetrics: true}, http.StatusInternalServerError},
+		{FakeScenario{url: vurl, failDB: true, failBroker: true, nilBroker: false, nilMetrics: true}, http.StatusInternalServerError},
+		{FakeScenario{url: vurl, failDB: true, failBroker: true, nilBroker: true, nilMetrics: false}, http.StatusInternalServerError},
 	}
 	for _, test := range tests {
-		h := test.input.service.Find("test", test.input.model)
+		mf := FakeModelFactory{fail: test.scenario.failDB}
+		service := NewFakeService(test.scenario)
+		h := service.Find(mf)
 		w := httptest.NewRecorder()
-		r := NewTestRequest("GET", test.input.url, test.input.body)
+		r := NewTestRequest("GET", test.scenario.url, test.scenario.body)
 		h(w, r)
 		actual := w.Code
 		if actual != test.expected {
-			t.Error(test.input)
-			t.Errorf("Error, expected %d, got %d using URL: %s", test.expected, actual, test.input.url)
+			t.Error(test.scenario)
+			t.Errorf("Error, expected %d, got %d using URL: %s", test.expected, actual, test.scenario.url)
 		}
 	}
 }
