@@ -2,7 +2,7 @@ package rest
 
 import "net/http"
 
-// ModelFactory
+// ModelFactory - has a New method that creates new model instances
 type ModelFactory interface {
 	New(r *http.Request) Model
 }
@@ -15,23 +15,23 @@ type Model interface {
 	Storage
 }
 
-// Identity
+// Identity - returns name of the model
 type Identity interface {
 	Name() string
 }
 
-// Serializer
+// Serializer - could be used for JSON marshalling and unmarshalling
 type Serializer interface {
 	Decode() error
 	Encode(v interface{}) ([]byte, error)
 }
 
-// Sanitizer
+// Sanitizer - input validation
 type Sanitizer interface {
 	Validate() error
 }
 
-// Storage
+// Storage - database abstraction
 type Storage interface {
 	Create() (interface{}, error)
 	Remove() (interface{}, error)
