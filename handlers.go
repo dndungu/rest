@@ -202,7 +202,7 @@ func (s *Service) Remove(modelFactory ModelFactory) http.HandlerFunc {
 			v, err := model.Remove()
 			if err == nil {
 				// Encode the output into []byte
-				body, _ := model.Encode(v)
+				body, _ = model.Encode(v)
 				//if err == nil {
 				// Notify other services, if an event broker exists
 				if s.broker != nil {
