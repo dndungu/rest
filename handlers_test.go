@@ -81,7 +81,7 @@ func (fm *FakeModel) Validate() error {
 }
 
 func (fm *FakeModel) Decode() error {
-	fm.items = []FakeModelFields{FakeModelFields{}}
+	fm.items = []FakeModelFields{{}}
 	decoder := json.NewDecoder(fm.request.Body)
 	return decoder.Decode(&fm.items[0])
 }
