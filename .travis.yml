@@ -3,7 +3,7 @@ language: go
 go:
   - 1.7
 script:
-  - go test -v -covermode=count -coverprofile=coverage.out ./...
+  - go test -race -v -covermode=count -coverprofile=coverage.out ./...
 notifications:
   email:
     on_success: never

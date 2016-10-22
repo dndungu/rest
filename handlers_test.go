@@ -52,20 +52,20 @@ type FakeModelFields struct {
 	Age  int    `json:"age"`
 }
 
-type FakeModel struct {
-	request *http.Request
-	FakeStorage
-	FakeIdentity
-	Fields FakeModelFields
-	items  []FakeModelFields
-}
-
 type FakeIdentity struct {
 	name string
 }
 
 func (fi *FakeIdentity) Name() string {
 	return fi.name
+}
+
+type FakeModel struct {
+	data    FakeModelFields
+	request *http.Request
+	FakeStorage
+	FakeIdentity
+	FakeSerializer
 }
 
 func (fm *FakeModel) Validate() error {
@@ -77,19 +77,23 @@ func (fm *FakeModel) Validate() error {
 		}
 		return nil
 	}
-	if fm.items[0].Name == `Otieno Kamau` && fm.items[0].Age == 21 {
+	if fm.data.Name == `Otieno Kamau` && fm.data.Age == 21 {
 		return nil
 	}
 	return errors.New("The data is invalid")
 }
 
-func (fm *FakeModel) Decode() error {
-	fm.items = []FakeModelFields{{}}
-	decoder := json.NewDecoder(fm.request.Body)
-	return decoder.Decode(&fm.items[0])
+type FakeSerializer struct {
+	request *http.Request
+	data    *FakeModelFields
 }
 
-func (fm *FakeModel) Encode(v interface{}) ([]byte, error) {
+func (fs *FakeSerializer) Decode() error {
+	decoder := json.NewDecoder(fs.request.Body)
+	return decoder.Decode(fs.data)
+}
+
+func (fm *FakeSerializer) Encode(v interface{}) ([]byte, error) {
 	return nil, nil
 }
 
@@ -148,7 +152,9 @@ type FakeModelFactory struct {
 }
 
 func (fmf FakeModelFactory) New(r *http.Request) Model {
-	return &FakeModel{request: r, FakeStorage: FakeStorage{fail: fmf.fail}}
+	model := FakeModel{FakeModelFields{}, r, FakeStorage{fmf.fail}, FakeIdentity{"test"}, FakeSerializer{request: r}}
+	model.FakeSerializer.data = &model.data
+	return &model
 }
 
 func TestInsert(t *testing.T) {
