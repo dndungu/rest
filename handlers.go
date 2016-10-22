@@ -27,6 +27,7 @@ func (s *Service) Insert(modelFactory ModelFactory) http.HandlerFunc {
 			if err == nil {
 				v, err := model.Create()
 				if err == nil {
+					// The output from model.Create could be invalid
 					body, _ = model.Encode(v)
 					//if err == nil {
 					// Allow event broker to be optional
@@ -44,15 +45,14 @@ func (s *Service) Insert(modelFactory ModelFactory) http.HandlerFunc {
 						s.logger.Error(err)
 						status, body = InternalServerErrorResponse()
 					}
+					//} else {
+					//	s.logger.Error(err)
+					//	status, body = InternalServerErrorResponse()
+					//}
 				} else {
 					s.logger.Error(err)
 					status, body = InternalServerErrorResponse()
 				}
-				//} else {
-				// Something wicked happened while persisting document
-				//	s.logger.Error(err)
-				//	status, body = InternalServerErrorResponse()
-				//}
 			} else {
 				s.logger.Error(err)
 				status, body = BadRequestResponse()
