@@ -93,7 +93,7 @@ func (fs *FakeSerializer) Decode() error {
 	return decoder.Decode(fs.data)
 }
 
-func (fm *FakeSerializer) Encode(v interface{}) ([]byte, error) {
+func (fs *FakeSerializer) Encode(v interface{}) ([]byte, error) {
 	return nil, nil
 }
 
