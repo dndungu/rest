@@ -2,10 +2,9 @@ package rest
 
 // Service holds application scope broker, logger and metrics adapters
 type Service struct {
-	broker     Broker
-	logger     Logger
-	metrics    Metrics
-	serializer Serializer
+	broker  Broker
+	logger  Logger
+	metrics Metrics
 }
 
 // Broker is an event stream adapter to notify other microservices of state changes
