@@ -5,7 +5,7 @@ import (
 )
 
 // Insert creates a http handler that will create a document in mongodb.
-// It takes a collection name and type struct of whitelisted fields
+// It a takes a model factory that handles the business logic of CRUD
 func (s *Service) Insert(modelFactory ModelFactory) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// model is request scoped
@@ -66,9 +66,21 @@ func (s *Service) Insert(modelFactory ModelFactory) http.HandlerFunc {
 	}
 }
 
-// Find creates a http handler that will list documents in mongodb
-// It takes a collection name and type struct of fields to return
-func (s *Service) Find(modelFactory ModelFactory) http.HandlerFunc {
+// FindOne - creates a http handler that will return one document from a mongodb if the id exists
+// It a takes a model factory and a mode that handles the business logic of CRUD
+func (s *Service) FindOne(modelFactory ModelFactory) http.HandlerFunc {
+	return s.Find(modelFactory, "one")
+}
+
+// FindMany - creates a http handler that will list documents from a mongodb
+// It a takes a model factory and a mode that handles the business logic of CRUD
+func (s *Service) FindMany(modelFactory ModelFactory) http.HandlerFunc {
+	return s.Find(modelFactory, "many")
+}
+
+// Find creates a http handler that will list documents or return one document from a mongodb
+// It a takes a model factory and a mode that handles the business logic of CRUD
+func (s *Service) Find(modelFactory ModelFactory, mode string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// model is request scoped
 		model := modelFactory.New(r)
@@ -84,10 +96,22 @@ func (s *Service) Find(modelFactory ModelFactory) http.HandlerFunc {
 		// Validate
 		err := model.Validate()
 		if err == nil {
-			v, err := model.Find()
+			var v interface{}
+			if mode == "one" {
+				v, err = model.FindOne()
+			} else {
+				if mode == "many" {
+					v, err = model.FindMany()
+				} else {
+					s.logger.Error("Only 'one' and 'many' modes are allowed")
+					status, body = InternalServerErrorResponse()
+					w.WriteHeader(status)
+					w.Write(body)
+					return
+				}
+			}
 			if err == nil {
 				body, _ = model.Encode(v)
-				//if err == nil {
 				// Notify other services, if an event broker exists
 				if s.broker != nil {
 					err = s.broker.Publish(event, body)
@@ -101,10 +125,6 @@ func (s *Service) Find(modelFactory ModelFactory) http.HandlerFunc {
 					s.logger.Error(err)
 					status, body = InternalServerErrorResponse()
 				}
-				//	} else {
-				//		s.logger.Error(err)
-				//		status, body = InternalServerErrorResponse()
-				//	}
 			} else {
 				// Something wicked happened while fetching document/s
 				s.logger.Error(err)
@@ -120,7 +140,7 @@ func (s *Service) Find(modelFactory ModelFactory) http.HandlerFunc {
 }
 
 // Update creates a http handler that will updates a document by id in mongodb
-// It takes a model creator argument
+// It a takes a model factory that handles the business logic of CRUD
 func (s *Service) Update(modelFactory ModelFactory) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		model := modelFactory.New(r)
@@ -183,7 +203,7 @@ func (s *Service) Update(modelFactory ModelFactory) http.HandlerFunc {
 }
 
 // Remove creates a http handler that will delete a document by id in mongodb
-// It takes a model creator argument
+// It a takes a model factory that handles the business logic of CRUD
 func (s *Service) Remove(modelFactory ModelFactory) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		model := modelFactory.New(r)

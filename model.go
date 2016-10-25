@@ -35,7 +35,8 @@ type Sanitizer interface {
 type Storage interface {
 	Create() (interface{}, error)
 	Remove() (interface{}, error)
-	Find() (interface{}, error)
+	FindOne() (interface{}, error)
+	FindMany() (interface{}, error)
 	Update() (interface{}, error)
 	Upsert() (interface{}, error)
 }

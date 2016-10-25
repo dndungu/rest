@@ -6,7 +6,6 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 )
 
@@ -70,17 +69,16 @@ type FakeModel struct {
 
 func (fm *FakeModel) Validate() error {
 	method := fm.request.Method
-	if strings.Compare(method, "DELETE") == 0 || strings.Compare(method, "GET") == 0 {
-		path := fm.request.URL.Path
-		if strings.Compare(path, "/test/1") != 0 {
-			return errors.New("Invalid URL parameter")
+	if fm.request.URL.Path == "/test/bad-id-format" {
+		return errors.New("Invalid URL parameter")
+	}
+	if method == "POST" || method == "PUT" {
+		if fm.data.Name == `Otieno Kamau` && fm.data.Age == 21 {
+			return nil
 		}
-		return nil
+		return errors.New("The data is invalid")
 	}
-	if fm.data.Name == `Otieno Kamau` && fm.data.Age == 21 {
-		return nil
-	}
-	return errors.New("The data is invalid")
+	return nil
 }
 
 type FakeSerializer struct {
@@ -109,7 +107,11 @@ func (fs *FakeStorage) Create() (interface{}, error) {
 	return fs.FakeAction()
 }
 
-func (fs *FakeStorage) Find() (interface{}, error) {
+func (fs *FakeStorage) FindOne() (interface{}, error) {
+	return fs.FakeAction()
+}
+
+func (fs *FakeStorage) FindMany() (interface{}, error) {
 	return fs.FakeAction()
 }
 
@@ -271,7 +273,7 @@ func TestUpdate(t *testing.T) {
 
 func TestRemove(t *testing.T) {
 	vurl := "http://foo.bar/test/1"
-	iurl := "http://foo.bar/test"
+	iurl := "http://foo.bar/test/bad-id-format"
 	tests := []struct {
 		scenario FakeScenario
 		expected int
@@ -311,7 +313,7 @@ func TestRemove(t *testing.T) {
 	}
 }
 
-func TestFind(t *testing.T) {
+func TestFindOne(t *testing.T) {
 	vurl := "http://foo.bar/test/1"
 	iurl := "http://foo.bar/test/bad-id-format"
 	tests := []struct {
@@ -342,7 +344,62 @@ func TestFind(t *testing.T) {
 	for _, test := range tests {
 		mf := FakeModelFactory{fail: test.scenario.failDB}
 		service := NewFakeService(test.scenario)
-		h := service.Find(mf)
+		h := service.FindOne(mf)
+		w := httptest.NewRecorder()
+		r := NewTestRequest("GET", test.scenario.url, test.scenario.body)
+		h(w, r)
+		actual := w.Code
+		if actual != test.expected {
+			t.Error(test.scenario)
+			t.Errorf("Error, expected %d, got %d using URL: %s", test.expected, actual, test.scenario.url)
+		}
+	}
+}
+
+func TestFindMany(t *testing.T) {
+	vurl := "http://foo.bar/test"
+	tests := []struct {
+		scenario FakeScenario
+		expected int
+	}{
+		{FakeScenario{url: vurl, failDB: false, failBroker: false, nilBroker: false, nilMetrics: false}, http.StatusOK},
+		{FakeScenario{url: vurl, failDB: true, failBroker: false, nilBroker: false, nilMetrics: false}, http.StatusInternalServerError},
+		{FakeScenario{url: vurl, failDB: false, failBroker: true, nilBroker: false, nilMetrics: false}, http.StatusInternalServerError},
+		{FakeScenario{url: vurl, failDB: false, failBroker: false, nilBroker: true, nilMetrics: false}, http.StatusOK},
+		{FakeScenario{url: vurl, failDB: false, failBroker: false, nilBroker: false, nilMetrics: true}, http.StatusOK},
+		{FakeScenario{url: vurl, failDB: true, failBroker: true, nilBroker: true, nilMetrics: true}, http.StatusInternalServerError},
+		{FakeScenario{url: vurl, failDB: false, failBroker: true, nilBroker: true, nilMetrics: true}, http.StatusOK},
+		{FakeScenario{url: vurl, failDB: true, failBroker: false, nilBroker: true, nilMetrics: true}, http.StatusInternalServerError},
+		{FakeScenario{url: vurl, failDB: true, failBroker: true, nilBroker: false, nilMetrics: true}, http.StatusInternalServerError},
+		{FakeScenario{url: vurl, failDB: true, failBroker: true, nilBroker: true, nilMetrics: false}, http.StatusInternalServerError},
+	}
+	for _, test := range tests {
+		mf := FakeModelFactory{fail: test.scenario.failDB}
+		service := NewFakeService(test.scenario)
+		h := service.FindMany(mf)
+		w := httptest.NewRecorder()
+		r := NewTestRequest("GET", test.scenario.url, test.scenario.body)
+		h(w, r)
+		actual := w.Code
+		if actual != test.expected {
+			t.Error(test.scenario)
+			t.Errorf("Error, expected %d, got %d using URL: %s", test.expected, actual, test.scenario.url)
+		}
+	}
+}
+
+func TestFindBadMode(t *testing.T) {
+	vurl := "http://foo.bar/test"
+	tests := []struct {
+		scenario FakeScenario
+		expected int
+	}{
+		{FakeScenario{url: vurl, failDB: true, failBroker: false, nilBroker: false, nilMetrics: false}, http.StatusInternalServerError},
+	}
+	for _, test := range tests {
+		mf := FakeModelFactory{fail: test.scenario.failDB}
+		service := NewFakeService(test.scenario)
+		h := service.Find(mf, "abcd")
 		w := httptest.NewRecorder()
 		r := NewTestRequest("GET", test.scenario.url, test.scenario.body)
 		h(w, r)
