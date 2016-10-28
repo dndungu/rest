@@ -2,9 +2,9 @@ package rest
 
 // Service holds application scope broker, logger and metrics adapters
 type Service struct {
-	broker  Broker
-	logger  Logger
-	metrics Metrics
+	Broker  Broker
+	Logger  Logger
+	Metrics Metrics
 }
 
 // Broker is an event stream adapter to notify other microservices of state changes
@@ -30,8 +30,8 @@ type Metrics interface {
 // NewTimer creates a stop timer to track the performance of a function
 func (s *Service) NewTimer(stat string) func() {
 	// Allow metrics to be optional
-	if s.metrics == nil {
+	if s.Metrics == nil {
 		return func() {}
 	}
-	return s.metrics.NewTimer(stat)
+	return s.Metrics.NewTimer(stat)
 }
