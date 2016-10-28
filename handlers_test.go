@@ -135,12 +135,12 @@ func (fs *FakeStorage) FakeAction() (interface{}, error) {
 }
 
 func NewFakeService(scenario FakeScenario) *Service {
-	service := Service{logger: MockLogger{}, metrics: nil, broker: nil}
+	service := Service{Logger: MockLogger{}, Metrics: nil, Broker: nil}
 	if !scenario.nilBroker {
-		service.broker = MockBroker{fail: scenario.failBroker}
+		service.Broker = MockBroker{fail: scenario.failBroker}
 	}
 	if !scenario.nilMetrics {
-		service.metrics = MockMetrics{}
+		service.Metrics = MockMetrics{}
 	}
 	return &service
 }
