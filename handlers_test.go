@@ -399,7 +399,7 @@ func TestFindBadMode(t *testing.T) {
 	for _, test := range tests {
 		mf := FakeModelFactory{fail: test.scenario.failDB}
 		service := NewFakeService(test.scenario)
-		h := service.Find(mf, "abcd")
+		h := service.find(mf, "abcd")
 		w := httptest.NewRecorder()
 		r := NewTestRequest("GET", test.scenario.url, test.scenario.body)
 		h(w, r)

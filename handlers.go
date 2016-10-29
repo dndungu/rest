@@ -70,18 +70,18 @@ func (s *Service) Insert(modelFactory ModelFactory) router.Handler {
 // FindOne - creates a http handler that will return one document from a mongodb if the id exists
 // It a takes a model factory and a mode that handles the business logic of CRUD
 func (s *Service) FindOne(modelFactory ModelFactory) router.Handler {
-	return s.Find(modelFactory, "one")
+	return s.find(modelFactory, "one")
 }
 
 // FindMany - creates a http handler that will list documents from a mongodb
 // It a takes a model factory and a mode that handles the business logic of CRUD
 func (s *Service) FindMany(modelFactory ModelFactory) router.Handler {
-	return s.Find(modelFactory, "many")
+	return s.find(modelFactory, "many")
 }
 
-// Find creates a http handler that will list documents or return one document from a mongodb
+// find creates a http handler that will list documents or return one document from a mongodb
 // It a takes a model factory and a mode that handles the business logic of CRUD
-func (s *Service) Find(modelFactory ModelFactory, mode string) router.Handler {
+func (s *Service) find(modelFactory ModelFactory, mode string) router.Handler {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// model is request scoped
 		model := modelFactory.New(r)
