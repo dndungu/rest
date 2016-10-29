@@ -1,7 +1,7 @@
 package rest
 
 import (
-	"github.com/zatiti/router"
+	"gopkg.in/zatiti/router.v1"
 	"net/http"
 )
 
