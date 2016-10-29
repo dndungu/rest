@@ -5,14 +5,13 @@ import (
 	"net/http"
 )
 
-// Insert creates a http handler that will create a document in mongodb.
-// It a takes a model factory that handles the business logic of CRUD
-func (s *Service) Insert(modelFactory ModelFactory) router.Handler {
+// write creates a http handler for creating or updating a document depending on the mode provided
+func (s *Service) write(modelFactory ModelFactory, mode string) router.Handler {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// model is request scoped
 		model := modelFactory.New(r)
 		// event is the name used to track metrics
-		event := model.Name() + "_insert_one"
+		event := model.Name() + "_" + mode + "_one"
 		// Track how long this function take to return
 		stop := s.NewTimer(event)
 		defer stop()
@@ -26,7 +25,19 @@ func (s *Service) Insert(modelFactory ModelFactory) router.Handler {
 			// Validate what came through the wire
 			verr := model.Validate()
 			if verr == nil {
-				v, err := model.Create()
+				var v interface{}
+				if mode == "insert" {
+					v, err = model.Create()
+					status = http.StatusCreated
+				}
+				if mode == "update" {
+					v, err = model.Update()
+					status = http.StatusNoContent
+				}
+				if mode == "upsert" {
+					v, err = model.Upsert()
+					status = http.StatusAccepted
+				}
 				if err == nil {
 					// The output from model.Create could be invalid
 					body, _ = model.Encode(v)
@@ -36,7 +47,6 @@ func (s *Service) Insert(modelFactory ModelFactory) router.Handler {
 						err = s.Broker.Publish(event, body)
 					}
 					if err == nil {
-						status = http.StatusCreated
 						// If a metrics client is defined use it
 						if s.Metrics != nil {
 							s.Metrics.Incr(event, 1)
@@ -67,20 +77,22 @@ func (s *Service) Insert(modelFactory ModelFactory) router.Handler {
 	}
 }
 
-// FindOne - creates a http handler that will return one document from a mongodb if the id exists
-// It a takes a model factory and a mode that handles the business logic of CRUD
-func (s *Service) FindOne(modelFactory ModelFactory) router.Handler {
-	return s.find(modelFactory, "one")
+// Insert creates a http handler that will create a document in model's database.
+func (s *Service) Insert(modelFactory ModelFactory) router.Handler {
+	return s.write(modelFactory, "insert")
 }
 
-// FindMany - creates a http handler that will list documents from a mongodb
-// It a takes a model factory and a mode that handles the business logic of CRUD
-func (s *Service) FindMany(modelFactory ModelFactory) router.Handler {
-	return s.find(modelFactory, "many")
+// Update creates a http handler that will updates a document by the model's update selector in model's database
+func (s *Service) Update(modelFactory ModelFactory) router.Handler {
+	return s.write(modelFactory, "update")
 }
 
-// find creates a http handler that will list documents or return one document from a mongodb
-// It a takes a model factory and a mode that handles the business logic of CRUD
+// Upsert creates a http handler that will upsert(create or update if it exists) a document selected by the model's upsert selector
+func (s *Service) Upsert(modelFactory ModelFactory) router.Handler {
+	return s.write(modelFactory, "upsert")
+}
+
+// find creates a http handler that will list documents or return one document from a model's database
 func (s *Service) find(modelFactory ModelFactory, mode string) router.Handler {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// model is request scoped
@@ -101,16 +113,9 @@ func (s *Service) find(modelFactory ModelFactory, mode string) router.Handler {
 			var err error
 			if mode == "one" {
 				v, err = model.FindOne()
-			} else {
-				if mode == "many" {
-					v, err = model.FindMany()
-				} else {
-					s.Logger.Error("Only 'one' and 'many' modes are allowed")
-					status, body = InternalServerErrorResponse()
-					w.WriteHeader(status)
-					w.Write(body)
-					return
-				}
+			}
+			if mode == "many" {
+				v, err = model.FindMany()
 			}
 			if err == nil {
 				body, _ = model.Encode(v)
@@ -141,71 +146,17 @@ func (s *Service) find(modelFactory ModelFactory, mode string) router.Handler {
 	}
 }
 
-// Update creates a http handler that will updates a document by id in mongodb
-// It a takes a model factory that handles the business logic of CRUD
-func (s *Service) Update(modelFactory ModelFactory) router.Handler {
-	return func(w http.ResponseWriter, r *http.Request) {
-		model := modelFactory.New(r)
-		// event is the name used to track metrics
-		event := model.Name() + "_update_one"
-		// Track how long this function take to return
-		stop := s.NewTimer(event)
-		defer stop()
-		// HTTP response status code
-		var status int
-		// HTTP response body
-		var body []byte
-		err := model.Decode()
-		if err == nil {
-			verr := model.Validate()
-			if verr == nil {
-				v, err := model.Update()
-				if err == nil {
-					// Decode
-					body, _ = model.Encode(v)
-					//if err == nil {
-					// Notify other services, if an event broker exists
-					if s.Broker != nil {
-						err = s.Broker.Publish(event, body)
-					}
-					if err == nil {
-						status, body = NoContentResponse()
-						// If a metrics client is defined use it
-						if s.Metrics != nil {
-							s.Metrics.Incr(event, 1)
-						}
-					} else {
-						//Something wicked happened while trying to publish to the event strea,
-						status, body = InternalServerErrorResponse()
-						s.Logger.Error(err)
-					}
-					//} else {
-					//	status, body = InternalServerErrorResponse()
-					//	s.Logger.Error(err)
-					//}
-				} else {
-					//Something wicked happened while persisting the update
-					status, body = InternalServerErrorResponse()
-					s.Logger.Error(err)
-				}
-
-			} else {
-				//The request failed validation rules in the model
-				status, body = verr.Code, []byte(verr.Message)
-				s.Logger.Error(verr.Message)
-			}
-		} else {
-			status, body = BadRequestResponse()
-			s.Logger.Error(err)
-
-		}
-		w.WriteHeader(status)
-		w.Write(body)
-	}
+// FindOne - creates a http handler that will return one document from a model's database if the id exists
+func (s *Service) FindOne(modelFactory ModelFactory) router.Handler {
+	return s.find(modelFactory, "one")
 }
 
-// Remove creates a http handler that will delete a document by id in mongodb
-// It a takes a model factory that handles the business logic of CRUD
+// FindMany - creates a http handler that will list documents from a model's database
+func (s *Service) FindMany(modelFactory ModelFactory) router.Handler {
+	return s.find(modelFactory, "many")
+}
+
+// Remove creates a http handler that will delete a document by remove selector specified in the model model
 func (s *Service) Remove(modelFactory ModelFactory) router.Handler {
 	return func(w http.ResponseWriter, r *http.Request) {
 		model := modelFactory.New(r)

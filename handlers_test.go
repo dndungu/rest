@@ -271,6 +271,62 @@ func TestUpdate(t *testing.T) {
 	}
 }
 
+func TestUpsert(t *testing.T) {
+	vb := `{"name": "Otieno Kamau", "age": 21}`
+	bb := "name=Bad Name"
+	ib := `{"name": "Otieno Kamau", "age": 17}`
+	url := "http://foo.bar/test/1"
+	tests := []struct {
+		scenario FakeScenario
+		expected int
+	}{
+		{FakeScenario{url: url, body: vb, failDB: false, failBroker: false, nilBroker: false, nilMetrics: false}, http.StatusAccepted},
+		{FakeScenario{url: url, body: vb, failDB: true, failBroker: false, nilBroker: false, nilMetrics: false}, http.StatusInternalServerError},
+		{FakeScenario{url: url, body: vb, failDB: false, failBroker: true, nilBroker: false, nilMetrics: false}, http.StatusInternalServerError},
+		{FakeScenario{url: url, body: vb, failDB: false, failBroker: false, nilBroker: true, nilMetrics: false}, http.StatusAccepted},
+		{FakeScenario{url: url, body: vb, failDB: false, failBroker: false, nilBroker: false, nilMetrics: true}, http.StatusAccepted},
+		{FakeScenario{url: url, body: vb, failDB: true, failBroker: true, nilBroker: true, nilMetrics: true}, http.StatusInternalServerError},
+		{FakeScenario{url: url, body: vb, failDB: false, failBroker: true, nilBroker: true, nilMetrics: true}, http.StatusAccepted},
+		{FakeScenario{url: url, body: vb, failDB: true, failBroker: false, nilBroker: true, nilMetrics: true}, http.StatusInternalServerError},
+		{FakeScenario{url: url, body: vb, failDB: true, failBroker: true, nilBroker: false, nilMetrics: true}, http.StatusInternalServerError},
+		{FakeScenario{url: url, body: vb, failDB: true, failBroker: true, nilBroker: true, nilMetrics: false}, http.StatusInternalServerError},
+
+		{FakeScenario{url: url, body: bb, failDB: false, failBroker: false, nilBroker: false, nilMetrics: false}, http.StatusBadRequest},
+		{FakeScenario{url: url, body: bb, failDB: true, failBroker: false, nilBroker: false, nilMetrics: false}, http.StatusBadRequest},
+		{FakeScenario{url: url, body: bb, failDB: false, failBroker: true, nilBroker: false, nilMetrics: false}, http.StatusBadRequest},
+		{FakeScenario{url: url, body: bb, failDB: false, failBroker: false, nilBroker: true, nilMetrics: false}, http.StatusBadRequest},
+		{FakeScenario{url: url, body: bb, failDB: false, failBroker: false, nilBroker: false, nilMetrics: true}, http.StatusBadRequest},
+		{FakeScenario{url: url, body: bb, failDB: true, failBroker: true, nilBroker: true, nilMetrics: true}, http.StatusBadRequest},
+		{FakeScenario{url: url, body: bb, failDB: false, failBroker: true, nilBroker: true, nilMetrics: true}, http.StatusBadRequest},
+		{FakeScenario{url: url, body: bb, failDB: true, failBroker: false, nilBroker: true, nilMetrics: true}, http.StatusBadRequest},
+		{FakeScenario{url: url, body: bb, failDB: true, failBroker: true, nilBroker: false, nilMetrics: true}, http.StatusBadRequest},
+		{FakeScenario{url: url, body: bb, failDB: true, failBroker: true, nilBroker: true, nilMetrics: false}, http.StatusBadRequest},
+
+		{FakeScenario{url: url, body: ib, failDB: false, failBroker: false, nilBroker: false, nilMetrics: false}, http.StatusBadRequest},
+		{FakeScenario{url: url, body: ib, failDB: true, failBroker: false, nilBroker: false, nilMetrics: false}, http.StatusBadRequest},
+		{FakeScenario{url: url, body: ib, failDB: false, failBroker: true, nilBroker: false, nilMetrics: false}, http.StatusBadRequest},
+		{FakeScenario{url: url, body: ib, failDB: false, failBroker: false, nilBroker: true, nilMetrics: false}, http.StatusBadRequest},
+		{FakeScenario{url: url, body: ib, failDB: false, failBroker: false, nilBroker: false, nilMetrics: true}, http.StatusBadRequest},
+		{FakeScenario{url: url, body: ib, failDB: true, failBroker: true, nilBroker: true, nilMetrics: true}, http.StatusBadRequest},
+		{FakeScenario{url: url, body: ib, failDB: false, failBroker: true, nilBroker: true, nilMetrics: true}, http.StatusBadRequest},
+		{FakeScenario{url: url, body: ib, failDB: true, failBroker: false, nilBroker: true, nilMetrics: true}, http.StatusBadRequest},
+		{FakeScenario{url: url, body: ib, failDB: true, failBroker: true, nilBroker: false, nilMetrics: true}, http.StatusBadRequest},
+		{FakeScenario{url: url, body: ib, failDB: true, failBroker: true, nilBroker: true, nilMetrics: false}, http.StatusBadRequest},
+	}
+	for _, test := range tests {
+		mf := FakeModelFactory{fail: test.scenario.failDB}
+		service := NewFakeService(test.scenario)
+		h := service.Upsert(mf)
+		w := httptest.NewRecorder()
+		r := NewTestRequest("PUT", test.scenario.url, test.scenario.body)
+		h(w, r)
+		actual := w.Code
+		if actual != test.expected {
+			t.Errorf("Error, expected %d, got %d for request body: %s", test.expected, actual, test.scenario.body)
+		}
+	}
+}
+
 func TestRemove(t *testing.T) {
 	vurl := "http://foo.bar/test/1"
 	iurl := "http://foo.bar/test/bad-id-format"
@@ -388,6 +444,7 @@ func TestFindMany(t *testing.T) {
 	}
 }
 
+/*
 func TestFindBadMode(t *testing.T) {
 	vurl := "http://foo.bar/test"
 	tests := []struct {
@@ -410,3 +467,4 @@ func TestFindBadMode(t *testing.T) {
 		}
 	}
 }
+*/
