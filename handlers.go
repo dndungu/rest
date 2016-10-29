@@ -24,8 +24,8 @@ func (s *Service) Insert(modelFactory ModelFactory) router.Handler {
 		err := model.Decode()
 		if err == nil {
 			// Validate what came through the wire
-			err = model.Validate()
-			if err == nil {
+			verr := model.Validate()
+			if verr == nil {
 				v, err := model.Create()
 				if err == nil {
 					// The output from model.Create could be invalid
@@ -55,8 +55,8 @@ func (s *Service) Insert(modelFactory ModelFactory) router.Handler {
 					status, body = InternalServerErrorResponse()
 				}
 			} else {
-				s.Logger.Error(err)
-				status, body = BadRequestResponse()
+				s.Logger.Error(verr.Message)
+				status, body = verr.Code, []byte(verr.Message)
 			}
 		} else {
 			s.Logger.Error(err)
@@ -95,9 +95,10 @@ func (s *Service) Find(modelFactory ModelFactory, mode string) router.Handler {
 		stop := s.NewTimer(event)
 		defer stop()
 		// Validate
-		err := model.Validate()
-		if err == nil {
+		verr := model.Validate()
+		if verr == nil {
 			var v interface{}
+			var err error
 			if mode == "one" {
 				v, err = model.FindOne()
 			} else {
@@ -132,8 +133,8 @@ func (s *Service) Find(modelFactory ModelFactory, mode string) router.Handler {
 				status, body = InternalServerErrorResponse()
 			}
 		} else {
-			s.Logger.Error(err)
-			status, body = BadRequestResponse()
+			s.Logger.Error(verr.Message)
+			status, body = verr.Code, []byte(verr.Message)
 		}
 		w.WriteHeader(status)
 		w.Write(body)
@@ -156,8 +157,8 @@ func (s *Service) Update(modelFactory ModelFactory) router.Handler {
 		var body []byte
 		err := model.Decode()
 		if err == nil {
-			err = model.Validate()
-			if err == nil {
+			verr := model.Validate()
+			if verr == nil {
 				v, err := model.Update()
 				if err == nil {
 					// Decode
@@ -190,8 +191,8 @@ func (s *Service) Update(modelFactory ModelFactory) router.Handler {
 
 			} else {
 				//The request failed validation rules in the model
-				status, body = BadRequestResponse()
-				s.Logger.Error(err)
+				status, body = verr.Code, []byte(verr.Message)
+				s.Logger.Error(verr.Message)
 			}
 		} else {
 			status, body = BadRequestResponse()
@@ -217,8 +218,8 @@ func (s *Service) Remove(modelFactory ModelFactory) router.Handler {
 		var status int
 		// HTTP response body
 		var body []byte
-		err := model.Validate()
-		if err == nil {
+		verr := model.Validate()
+		if verr == nil {
 			// Remove the item if it exists
 			v, err := model.Remove()
 			if err == nil {
@@ -248,8 +249,8 @@ func (s *Service) Remove(modelFactory ModelFactory) router.Handler {
 				s.Logger.Error(err)
 			}
 		} else {
-			status, body = BadRequestResponse()
-			s.Logger.Error(err)
+			status, body = verr.Code, []byte(verr.Message)
+			s.Logger.Error(verr.Message)
 		}
 		w.WriteHeader(status)
 		w.Write(body)

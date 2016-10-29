@@ -67,16 +67,16 @@ type FakeModel struct {
 	FakeSerializer
 }
 
-func (fm *FakeModel) Validate() error {
+func (fm *FakeModel) Validate() *ValidationError {
 	method := fm.request.Method
 	if fm.request.URL.Path == "/test/bad-id-format" {
-		return errors.New("Invalid URL parameter")
+		return &ValidationError{400, "Invalid URL parameter"}
 	}
 	if method == "POST" || method == "PUT" {
 		if fm.data.Name == `Otieno Kamau` && fm.data.Age == 21 {
 			return nil
 		}
-		return errors.New("The data is invalid")
+		return &ValidationError{400, "The data is invalid"}
 	}
 	return nil
 }

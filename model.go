@@ -26,9 +26,14 @@ type Serializer interface {
 	Encode(v interface{}) ([]byte, error)
 }
 
+type ValidationError struct {
+	Code    int
+	Message string
+}
+
 // Sanitizer - input validation
 type Sanitizer interface {
-	Validate() error
+	Validate() *ValidationError
 }
 
 // Storage - database abstraction
