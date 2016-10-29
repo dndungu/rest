@@ -19,43 +19,5 @@ REST encourages mocking database, metrics client, and event broker to allow for 
 ## Example
 
 ```go
-package models
-
-import (
-    "encoding/json"
-    "errors"
-    "fmt"
-    "github.com/zatiti/validator"
-    "net/http"
-)
-
-var TenantCollection = "tenant"
-
-type Tenant struct {
-    Host string `json:"host"`
-}
-
-func (t *Tenant) Validate(r *http.Request) error {
-    decoder := json.NewDecoder(r.Body)
-    err := decoder.Decode(t)
-    if err != nil {
-        return err
-    }
-    if validator.IsDomain(t.Host) {
-        return nil
-    }
-    return errors.New(fmt.Sprintf("Error, domain: %s is invalid", t.Host))
-}
-
-func (t *Tenant) Create(r *http.Request) ([]byte, error) {
-    err := env.DB.Insert(TenantCollection, t)
-    if err != nil {
-        return nil, err
-    }
-    return []byte(""), nil
-}
-
-func (t *Tenant) Find(r *http.Request) ([]byte, error)   {}
-func (t *Tenant) Update(r *http.Request) ([]byte, error) {}
-func (t *Tenant) Delete(r *http.Request) error           {}
+// TODO
 ```
