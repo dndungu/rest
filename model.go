@@ -26,6 +26,7 @@ type Serializer interface {
 	Encode(v interface{}) ([]byte, error)
 }
 
+// ValidationError - wraps validation errors to provide more info to the client e.g invalid fields, conflict etc
 type ValidationError struct {
 	Code    int
 	Message string
