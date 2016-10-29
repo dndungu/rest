@@ -5,16 +5,16 @@
 [![Issue Count](https://codeclimate.com/github/dndungu/rest/badges/issue_count.svg)](https://codeclimate.com/github/dndungu/rest)
 
 # REST
-REST is an opinionated library for quickly creating RESTful micro services. It is built using lessons learned while architecting micro services systems.
+REST is an opinionated library for quickly creating RESTful micro services. It is built using lessons learned while architecting micro services.
 
 ## Event driven architecture
-REST encourages using an event broker to send state changes between services.
+REST makes it easy to use an event broker to send state changes between services.
 
 ## Metrics
-REST encourages tracking function performance metrics.
+REST makes it easy to track function performance metrics.
 
 ## Unit Testing
-REST encourages mocking database, metrics client, and event broker to allow for 100% test code coverage in your project.
+REST makes it easy to mock database, metrics client, and event broker to allow for 100% test code coverage in a RESTful.
 
 ## Example
 
