@@ -215,7 +215,7 @@ func (s *Service) Remove(modelFactory ModelFactory) router.Handler {
 			}
 		}
 		write(status, body)
-		// If a metrics client is defined count this succesful request
+		// If a metrics client is defined count this successful request
 		if s.Metrics != nil {
 			s.Metrics.Incr(event, 1)
 		}
