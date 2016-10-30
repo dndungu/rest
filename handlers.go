@@ -6,11 +6,11 @@ import (
 )
 
 // write creates a http handler for creating or updating a document depending on the mode provided
-func (s *Service) write(modelFactory ModelFactory, mode string) router.Handler {
+func (s *Service) persist(modelFactory ModelFactory, mode string) router.Handler {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// model is request scoped
+		// Model is request scoped
 		model := modelFactory.New(r)
-		// event is the name used to track metrics
+		// Event is the name used to track metrics
 		event := model.Name() + "_" + mode + "_one"
 		// Track how long this function take to return
 		stop := s.NewTimer(event)
@@ -19,76 +19,80 @@ func (s *Service) write(modelFactory ModelFactory, mode string) router.Handler {
 		var status int
 		// HTTP response body
 		var body []byte
+		// Send response back to client
+		write := func(status int, body []byte) {
+			w.WriteHeader(status)
+			w.Write(body)
+		}
 		// Instanciate a value of the model being created from the request body
 		err := model.Decode()
-		if err == nil {
-			// Validate what came through the wire
-			verr := model.Validate()
-			if verr == nil {
-				if mode == "insert" {
-					err = model.Create()
-					status = http.StatusCreated
-				}
-				if mode == "update" {
-					err = model.Update()
-					status = http.StatusNoContent
-				}
-				if mode == "upsert" {
-					err = model.Upsert()
-					status = http.StatusAccepted
-				}
-				if err == nil {
-					// The output from model.Create could be invalid
-					body, _ = model.Encode(model.Items())
-					//if err == nil {
-					// Allow event broker to be optional
-					if s.Broker != nil {
-						err = s.Broker.Publish(event, body)
-					}
-					if err == nil {
-						// If a metrics client is defined use it
-						if s.Metrics != nil {
-							s.Metrics.Incr(event, 1)
-						}
-					} else {
-						// Something wicked happened while publishing to the event stream
-						s.Logger.Error(err)
-						status, body = InternalServerErrorResponse()
-					}
-					//} else {
-					//	s.Logger.Error(err)
-					//	status, body = InternalServerErrorResponse()
-					//}
-				} else {
-					s.Logger.Error(err)
-					status, body = InternalServerErrorResponse()
-				}
-			} else {
-				s.Logger.Error(verr.Message)
-				status, body = verr.Code, []byte(verr.Message)
-			}
-		} else {
-			s.Logger.Error(err)
+		if err != nil {
 			status, body = BadRequestResponse()
+			write(status, body)
+			s.Logger.Error(err)
+			return
 		}
-		w.WriteHeader(status)
-		w.Write(body)
+		// Validate user input
+		verr := model.Validate()
+		if verr != nil {
+			status, body = verr.Code, []byte(verr.Message)
+			write(status, body)
+			s.Logger.Error(verr.Message)
+			return
+		}
+		// Call the relevant model action
+		switch {
+		case mode == "insert":
+			err = model.Create()
+		case mode == "update":
+			err = model.Update()
+		case mode == "upsert":
+			err = model.Upsert()
+		}
+		// Handle failed database operation
+		if err != nil {
+			status, body = InternalServerErrorResponse()
+			write(status, body)
+			s.Logger.Error(err)
+			return
+		}
+		// Get Response from model
+		response := model.Response()
+		status = response.Status
+		// Encode the response body to the appropriate format
+		body, _ = model.Encode(response.Body)
+		// If event broker is defined use it
+		if s.Broker != nil {
+			err = s.Broker.Publish(event, response)
+			if err != nil {
+				status, body = InternalServerErrorResponse()
+				write(status, body)
+				s.Logger.Error(err)
+				return
+			}
+		}
+		// Send response to client
+		write(status, body)
+		// if metrics client is defined, count this function call
+		if s.Metrics != nil {
+			s.Metrics.Incr(event, 1)
+		}
 	}
 }
 
 // Insert creates a http handler that will create a document in model's database.
 func (s *Service) Insert(modelFactory ModelFactory) router.Handler {
-	return s.write(modelFactory, "insert")
+	return s.persist(modelFactory, "insert")
 }
 
 // Update creates a http handler that will updates a document by the model's update selector in model's database
 func (s *Service) Update(modelFactory ModelFactory) router.Handler {
-	return s.write(modelFactory, "update")
+	return s.persist(modelFactory, "update")
 }
 
 // Upsert creates a http handler that will upsert(create or update if it exists) a document selected by the model's upsert selector
 func (s *Service) Upsert(modelFactory ModelFactory) router.Handler {
-	return s.write(modelFactory, "upsert")
+	return s.persist(modelFactory, "upsert")
 }
 
 // find creates a http handler that will list documents or return one document from a model's database
@@ -105,42 +109,51 @@ func (s *Service) find(modelFactory ModelFactory, mode string) router.Handler {
 		// Track how long this function take to return
 		stop := s.NewTimer(event)
 		defer stop()
-		// Validate
-		verr := model.Validate()
-		if verr == nil {
-			var err error
-			if mode == "one" {
-				err = model.FindOne()
-			}
-			if mode == "many" {
-				err = model.FindMany()
-			}
-			if err == nil {
-				body, _ = model.Encode(model.Items())
-				// Notify other services, if an event broker exists
-				if s.Broker != nil {
-					err = s.Broker.Publish(event, body)
-				}
-				if err == nil {
-					status = http.StatusOK
-					if s.Metrics != nil {
-						s.Metrics.Incr(event, 1)
-					}
-				} else {
-					s.Logger.Error(err)
-					status, body = InternalServerErrorResponse()
-				}
-			} else {
-				// Something wicked happened while fetching document/s
-				s.Logger.Error(err)
-				status, body = InternalServerErrorResponse()
-			}
-		} else {
-			s.Logger.Error(verr.Message)
-			status, body = verr.Code, []byte(verr.Message)
+		// Send response back to client
+		write := func(status int, body []byte) {
+			w.WriteHeader(status)
+			w.Write(body)
 		}
-		w.WriteHeader(status)
-		w.Write(body)
+		// Validate user input
+		verr := model.Validate()
+		if verr != nil {
+			status, body = verr.Code, []byte(verr.Message)
+			write(status, body)
+			s.Logger.Error(verr.Message)
+			return
+		}
+		var err error
+		switch {
+		case mode == "one":
+			err = model.FindOne()
+		case mode == "many":
+			err = model.FindMany()
+		}
+		if err != nil {
+			// Something wicked happened while fetching document/s
+			status, body = InternalServerErrorResponse()
+			write(status, body)
+			s.Logger.Error(err)
+			return
+		}
+		// Notify other services, if an event broker exists
+		if s.Broker != nil {
+			err = s.Broker.Publish(event, body)
+			if err != nil {
+				status, body = InternalServerErrorResponse()
+				write(status, body)
+				s.Logger.Error(err)
+				return
+			}
+		}
+		response := model.Response()
+		body, _ = model.Encode(response.Body)
+		status = response.Status
+		write(status, body)
+		// If a metrics client is defined count this successful request
+		if s.Metrics != nil {
+			s.Metrics.Incr(event, 1)
+		}
 	}
 }
 
@@ -167,41 +180,44 @@ func (s *Service) Remove(modelFactory ModelFactory) router.Handler {
 		var status int
 		// HTTP response body
 		var body []byte
+		// Send response back to client
+		write := func(status int, body []byte) {
+			w.WriteHeader(status)
+			w.Write(body)
+		}
+		// Validate the user input
 		verr := model.Validate()
-		if verr == nil {
-			// Remove the item if it exists
-			err := model.Remove()
-			if err == nil {
-				// Encode the output into []byte
-				body, _ = model.Encode(model.Items())
-				//if err == nil {
-				// Notify other services, if an event broker exists
-				if s.Broker != nil {
-					err = s.Broker.Publish(event, body)
-				}
-				if err == nil {
-					status, body = NoContentResponse()
-					// If a metrics client is defined use it
-					if s.Metrics != nil {
-						s.Metrics.Incr(event, 1)
-					}
-				} else {
-					status, body = InternalServerErrorResponse()
-					s.Logger.Error(err)
-				}
-				//} else {
-				//	status, body = InternalServerErrorResponse()
-				//	s.Logger.Error(err)
-				//}
-			} else {
-				status, body = InternalServerErrorResponse()
-				s.Logger.Error(err)
-			}
-		} else {
+		if verr != nil {
 			status, body = verr.Code, []byte(verr.Message)
 			s.Logger.Error(verr.Message)
+			write(status, body)
+			return
 		}
-		w.WriteHeader(status)
-		w.Write(body)
+		// Remove the item if it exists
+		err := model.Remove()
+		if err != nil {
+			status, body = InternalServerErrorResponse()
+			write(status, body)
+			s.Logger.Error(err)
+			return
+		}
+		response := model.Response()
+		status = response.Status
+		body, _ = model.Encode(response.Body)
+		// Notify other services, if an event broker exists
+		if s.Broker != nil {
+			err = s.Broker.Publish(event, response)
+			if err != nil {
+				status, body = InternalServerErrorResponse()
+				write(status, body)
+				s.Logger.Error(err)
+				return
+			}
+		}
+		write(status, body)
+		// If a metrics client is defined count this succesful request
+		if s.Metrics != nil {
+			s.Metrics.Incr(event, 1)
+		}
 	}
 }

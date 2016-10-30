@@ -4,6 +4,12 @@ import (
 	"net/http"
 )
 
+type Response struct {
+	Body    interface{}
+	Headers map[string]string
+	Status  int
+}
+
 // InternalServerErrorResponse returns 500, Internal Server Error
 func InternalServerErrorResponse() (int, []byte) {
 	i := http.StatusInternalServerError

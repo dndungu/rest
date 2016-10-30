@@ -13,6 +13,7 @@ type Model interface {
 	Sanitizer
 	Serializer
 	Storage
+	Response() *Response
 }
 
 // Identity - returns name of the model
@@ -45,5 +46,4 @@ type Storage interface {
 	FindMany() error
 	Update() error
 	Upsert() error
-	Items() *[]map[string]interface{}
 }
