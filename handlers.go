@@ -56,11 +56,7 @@ func (s *Service) persist(modelFactory ModelFactory, mode string) router.Handler
 			s.Logger.Error(err)
 			return
 		}
-		// Get Response from model
 		response := model.Response()
-		status = response.Status
-		// Encode the response body to the appropriate format
-		body, _ = model.Encode(response.Body)
 		// If event broker is defined use it
 		if s.Broker != nil {
 			err = s.Broker.Publish(event, response)
@@ -70,6 +66,15 @@ func (s *Service) persist(modelFactory ModelFactory, mode string) router.Handler
 				s.Logger.Error(err)
 				return
 			}
+		}
+		// Get Response from model
+		status = response.Status
+		headers := response.Headers
+		// Encode the response body to the appropriate format
+		body, _ = model.Encode(response.Body)
+		// Set response headers
+		for key, value := range headers {
+			w.Header().Set(key, value)
 		}
 		// Send response to client
 		write(status, body)
@@ -136,9 +141,10 @@ func (s *Service) find(modelFactory ModelFactory, mode string) router.Handler {
 			s.Logger.Error(err)
 			return
 		}
+		response := model.Response()
 		// Notify other services, if an event broker exists
 		if s.Broker != nil {
-			err = s.Broker.Publish(event, body)
+			err = s.Broker.Publish(event, response)
 			if err != nil {
 				status, body = InternalServerErrorResponse()
 				write(status, body)
@@ -146,9 +152,12 @@ func (s *Service) find(modelFactory ModelFactory, mode string) router.Handler {
 				return
 			}
 		}
-		response := model.Response()
 		body, _ = model.Encode(response.Body)
 		status = response.Status
+		// Set response headers
+		for key, value := range response.Headers {
+			w.Header().Set(key, value)
+		}
 		write(status, body)
 		// If a metrics client is defined count this successful request
 		if s.Metrics != nil {
@@ -202,9 +211,6 @@ func (s *Service) Remove(modelFactory ModelFactory) router.Handler {
 			return
 		}
 		response := model.Response()
-		status = response.Status
-		body, _ = model.Encode(response.Body)
-		// Notify other services, if an event broker exists
 		if s.Broker != nil {
 			err = s.Broker.Publish(event, response)
 			if err != nil {
@@ -214,6 +220,13 @@ func (s *Service) Remove(modelFactory ModelFactory) router.Handler {
 				return
 			}
 		}
+		// Set response headers
+		for key, value := range response.Headers {
+			w.Header().Set(key, value)
+		}
+		status = response.Status
+		body, _ = model.Encode(response.Body)
+		// Notify other services, if an event broker exists
 		write(status, body)
 		// If a metrics client is defined count this successful request
 		if s.Metrics != nil {
