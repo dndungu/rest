@@ -2,5 +2,16 @@
 	"ImportPath": "rest",
 	"GoVersion": "go1.7",
 	"GodepVersion": "v74",
-	"Deps": []
+	"Deps": [
+		{
+			"ImportPath": "github.com/gorilla/context",
+			"Comment": "v1.1-7-g08b5f42",
+			"Rev": "08b5f424b9271eedf6f9f0ce86cb9396ed337a42"
+		},
+		{
+			"ImportPath": "gopkg.in/zatiti/router.v1",
+			"Comment": "v1.0.0",
+			"Rev": "d91dcf240cf43ed9e6a657f792a63ce4a0d19924"
+		}
+	]
 }
