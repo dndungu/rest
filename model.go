@@ -39,10 +39,11 @@ type Sanitizer interface {
 
 // Storage - database abstraction
 type Storage interface {
-	Create() (interface{}, error)
-	Remove() (interface{}, error)
-	FindOne() (interface{}, error)
-	FindMany() (interface{}, error)
-	Update() (interface{}, error)
-	Upsert() (interface{}, error)
+	Create() error
+	Remove() error
+	FindOne() error
+	FindMany() error
+	Update() error
+	Upsert() error
+	Items() *[]map[string]interface{}
 }

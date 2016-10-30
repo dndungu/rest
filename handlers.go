@@ -25,22 +25,21 @@ func (s *Service) write(modelFactory ModelFactory, mode string) router.Handler {
 			// Validate what came through the wire
 			verr := model.Validate()
 			if verr == nil {
-				var v interface{}
 				if mode == "insert" {
-					v, err = model.Create()
+					err = model.Create()
 					status = http.StatusCreated
 				}
 				if mode == "update" {
-					v, err = model.Update()
+					err = model.Update()
 					status = http.StatusNoContent
 				}
 				if mode == "upsert" {
-					v, err = model.Upsert()
+					err = model.Upsert()
 					status = http.StatusAccepted
 				}
 				if err == nil {
 					// The output from model.Create could be invalid
-					body, _ = model.Encode(v)
+					body, _ = model.Encode(model.Items())
 					//if err == nil {
 					// Allow event broker to be optional
 					if s.Broker != nil {
@@ -98,7 +97,7 @@ func (s *Service) find(modelFactory ModelFactory, mode string) router.Handler {
 		// model is request scoped
 		model := modelFactory.New(r)
 		// event is the name used to track metrics
-		event := model.Name() + "_find_" + mode
+		event := model.Name() + "_find_many"
 		// HTTP response status code
 		var status int
 		// HTTP response body
@@ -109,16 +108,15 @@ func (s *Service) find(modelFactory ModelFactory, mode string) router.Handler {
 		// Validate
 		verr := model.Validate()
 		if verr == nil {
-			var v interface{}
 			var err error
 			if mode == "one" {
-				v, err = model.FindOne()
+				err = model.FindOne()
 			}
 			if mode == "many" {
-				v, err = model.FindMany()
+				err = model.FindMany()
 			}
 			if err == nil {
-				body, _ = model.Encode(v)
+				body, _ = model.Encode(model.Items())
 				// Notify other services, if an event broker exists
 				if s.Broker != nil {
 					err = s.Broker.Publish(event, body)
@@ -172,10 +170,10 @@ func (s *Service) Remove(modelFactory ModelFactory) router.Handler {
 		verr := model.Validate()
 		if verr == nil {
 			// Remove the item if it exists
-			v, err := model.Remove()
+			err := model.Remove()
 			if err == nil {
 				// Encode the output into []byte
-				body, _ = model.Encode(v)
+				body, _ = model.Encode(model.Items())
 				//if err == nil {
 				// Notify other services, if an event broker exists
 				if s.Broker != nil {

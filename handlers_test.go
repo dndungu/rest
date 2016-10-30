@@ -100,38 +100,43 @@ type FakeMessage struct {
 }
 
 type FakeStorage struct {
-	fail bool
+	fail  bool
+	items []map[string]interface{}
 }
 
-func (fs *FakeStorage) Create() (interface{}, error) {
+func (fs *FakeStorage) Create() error {
 	return fs.FakeAction()
 }
 
-func (fs *FakeStorage) FindOne() (interface{}, error) {
+func (fs *FakeStorage) FindOne() error {
 	return fs.FakeAction()
 }
 
-func (fs *FakeStorage) FindMany() (interface{}, error) {
+func (fs *FakeStorage) FindMany() error {
 	return fs.FakeAction()
 }
 
-func (fs *FakeStorage) Update() (interface{}, error) {
+func (fs *FakeStorage) Update() error {
 	return fs.FakeAction()
 }
 
-func (fs *FakeStorage) Remove() (interface{}, error) {
+func (fs *FakeStorage) Remove() error {
 	return fs.FakeAction()
 }
 
-func (fs *FakeStorage) Upsert() (interface{}, error) {
+func (fs *FakeStorage) Upsert() error {
 	return fs.FakeAction()
 }
 
-func (fs *FakeStorage) FakeAction() (interface{}, error) {
+func (fs *FakeStorage) FakeAction() error {
 	if fs.fail {
-		return nil, errors.New("Database failed on purpose")
+		return errors.New("Database failed on purpose")
 	}
-	return nil, nil
+	return nil
+}
+
+func (fs *FakeStorage) Items() *[]map[string]interface{} {
+	return &fs.items
 }
 
 func NewFakeService(scenario FakeScenario) *Service {
@@ -154,7 +159,7 @@ type FakeModelFactory struct {
 }
 
 func (fmf FakeModelFactory) New(r *http.Request) Model {
-	model := FakeModel{FakeModelFields{}, r, FakeStorage{fmf.fail}, FakeIdentity{"test"}, FakeSerializer{request: r}}
+	model := FakeModel{FakeModelFields{}, r, FakeStorage{fail: fmf.fail}, FakeIdentity{"test"}, FakeSerializer{request: r}}
 	model.FakeSerializer.data = &model.data
 	return &model
 }
