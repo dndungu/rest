@@ -98,7 +98,7 @@ func (s *Service) find(modelFactory ModelFactory, mode string) router.Handler {
 		// model is request scoped
 		model := modelFactory.New(r)
 		// event is the name used to track metrics
-		event := model.Name() + "_find_many"
+		event := model.Name() + "_find_" + mode
 		// HTTP response status code
 		var status int
 		// HTTP response body
