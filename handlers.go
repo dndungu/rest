@@ -11,7 +11,7 @@ func (s *Service) persist(modelFactory ModelFactory, mode string) router.Handler
 		// Model is request scoped
 		model := modelFactory.New(r)
 		// Event is the name used to track metrics
-		event := model.Name() + "_" + mode + "_one"
+		event := model.Name() + "_" + mode
 		// Track how long this function take to return
 		stop := s.NewTimer(event)
 		defer stop()
@@ -106,7 +106,7 @@ func (s *Service) find(modelFactory ModelFactory, mode string) router.Handler {
 		// model is request scoped
 		model := modelFactory.New(r)
 		// event is the name used to track metrics
-		event := model.Name() + "_find_many"
+		event := model.Name() + "_find_" + mode
 		// HTTP response status code
 		var status int
 		// HTTP response body
@@ -181,7 +181,7 @@ func (s *Service) Remove(modelFactory ModelFactory) router.Handler {
 	return func(w http.ResponseWriter, r *http.Request) {
 		model := modelFactory.New(r)
 		// event is the name used to track metrics
-		event := model.Name() + "_delete_one"
+		event := model.Name() + "_delete"
 		// Track how long this function take to return
 		stop := s.NewTimer(event)
 		defer stop()
