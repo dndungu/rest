@@ -4,6 +4,7 @@ import (
 	"net/http"
 )
 
+// Response - holds the data to be sent to the client
 type Response struct {
 	Body    interface{}
 	Headers map[string]string
