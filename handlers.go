@@ -33,17 +33,17 @@ func (s *Service) persist(modelFactory ModelFactory, mode string) router.Handler
 			return
 		}
 		// Validate user input
-		verr := model.Validate()
+		verr := model.Validate(mode)
 		if verr != nil {
 			status, body = verr.Code, []byte(verr.Message)
 			write(status, body)
-			s.Logger.Error(verr.Message)
+			s.Logger.Error(verr.Error())
 			return
 		}
 		// Call the relevant model action
 		switch {
 		case mode == "insert":
-			err = model.Create()
+			err = model.Insert()
 		case mode == "update":
 			err = model.Update()
 		case mode == "upsert":
@@ -103,7 +103,7 @@ func (s *Service) find(modelFactory ModelFactory, mode string) router.Handler {
 		// model is request scoped
 		model := modelFactory.New(r)
 		// event is the name used to track metrics
-		event := model.Name() + "_find_" + mode
+		event := model.Name() + "_" + mode
 		// HTTP response status code
 		var status int
 		// HTTP response body
@@ -117,7 +117,7 @@ func (s *Service) find(modelFactory ModelFactory, mode string) router.Handler {
 			w.Write(body)
 		}
 		// Validate user input
-		verr := model.Validate()
+		verr := model.Validate(mode)
 		if verr != nil {
 			status, body = verr.Code, []byte(verr.Message)
 			write(status, body)
@@ -126,9 +126,9 @@ func (s *Service) find(modelFactory ModelFactory, mode string) router.Handler {
 		}
 		var err error
 		switch {
-		case mode == "one":
+		case mode == "find_one":
 			err = model.FindOne()
-		case mode == "many":
+		case mode == "find_many":
 			err = model.FindMany()
 		}
 		if err != nil {
@@ -162,12 +162,12 @@ func (s *Service) find(modelFactory ModelFactory, mode string) router.Handler {
 
 // FindOne - creates a http handler that will return one document from a model's database if the id exists
 func (s *Service) FindOne(modelFactory ModelFactory) router.Handler {
-	return s.find(modelFactory, "one")
+	return s.find(modelFactory, "find_one")
 }
 
 // FindMany - creates a http handler that will list documents from a model's database
 func (s *Service) FindMany(modelFactory ModelFactory) router.Handler {
-	return s.find(modelFactory, "many")
+	return s.find(modelFactory, "find_many")
 }
 
 // Remove creates a http handler that will delete a document by remove selector specified in the model model
@@ -189,7 +189,7 @@ func (s *Service) Remove(modelFactory ModelFactory) router.Handler {
 			w.Write(body)
 		}
 		// Validate the user input
-		verr := model.Validate()
+		verr := model.Validate("remove")
 		if verr != nil {
 			status, body = verr.Code, []byte(verr.Message)
 			s.Logger.Error(verr.Message)

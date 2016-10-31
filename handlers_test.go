@@ -74,16 +74,16 @@ type FakeModel struct {
 	FakeSerializer
 }
 
-func (fm *FakeModel) Validate() *ValidationError {
+func (fm *FakeModel) Validate(mode string) *Error {
 	method := fm.request.Method
 	if fm.request.URL.Path == "/test/bad-id-format" {
-		return &ValidationError{400, "Invalid URL parameter"}
+		return &Error{400, "Invalid URL parameter"}
 	}
 	if method == "POST" || method == "PUT" {
 		if fm.input.Name == `Otieno Kamau` && fm.input.Age == 21 {
 			return nil
 		}
-		return &ValidationError{400, "The data is invalid"}
+		return &Error{400, "The data is invalid"}
 	}
 	return nil
 }
@@ -115,7 +115,7 @@ type FakeStorage struct {
 	context *FakeContext
 }
 
-func (fs *FakeStorage) Create() error {
+func (fs *FakeStorage) Insert() error {
 	fs.context.output.Body = fs.context.input
 	return fs.FakeAction(http.StatusCreated, http.StatusInternalServerError)
 }
