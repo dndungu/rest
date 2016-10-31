@@ -51,10 +51,7 @@ func (s *Service) persist(modelFactory ModelFactory, mode string) router.Handler
 		}
 		// Handle failed database operation
 		if err != nil {
-			status, body = InternalServerErrorResponse()
-			write(status, body)
 			s.Logger.Error(err)
-			return
 		}
 		response := model.Response()
 		// If event broker is defined use it
@@ -136,10 +133,7 @@ func (s *Service) find(modelFactory ModelFactory, mode string) router.Handler {
 		}
 		if err != nil {
 			// Something wicked happened while fetching document/s
-			status, body = InternalServerErrorResponse()
-			write(status, body)
 			s.Logger.Error(err)
-			return
 		}
 		response := model.Response()
 		// Notify other services, if an event broker exists
@@ -205,10 +199,7 @@ func (s *Service) Remove(modelFactory ModelFactory) router.Handler {
 		// Remove the item if it exists
 		err := model.Remove()
 		if err != nil {
-			status, body = InternalServerErrorResponse()
-			write(status, body)
 			s.Logger.Error(err)
-			return
 		}
 		response := model.Response()
 		if s.Broker != nil {
