@@ -54,22 +54,7 @@ func (s *Service) process(modelFactory *ModelFactory, action string) router.Hand
 			return
 		}
 		// Call the relevant model action
-		switch {
-		case action == "insert_one":
-			err = model.InsertOne()
-		case action == "insert_many":
-			err = model.InsertMany()
-		case action == "update":
-			err = model.Update()
-		case action == "upsert":
-			err = model.Upsert()
-		case action == "find_one":
-			err = model.FindOne()
-		case action == "find_many":
-			err = model.FindMany()
-		case action == "remove":
-			err = model.Remove()
-		}
+		s.storageOperation(model, action)
 		// Handle failed database operation
 		if err != nil {
 			s.Logger.Error(err)
@@ -82,6 +67,26 @@ func (s *Service) process(modelFactory *ModelFactory, action string) router.Hand
 				s.Logger.Error(err)
 			}
 		}
+	}
+}
+
+// dataOperation -
+func (s *Service) storageOperation(model *Model, action string) error {
+	switch {
+	case action == "insert_one":
+		err = model.InsertOne()
+	case action == "insert_many":
+		err = model.InsertMany()
+	case action == "update":
+		err = model.Update()
+	case action == "upsert":
+		err = model.Upsert()
+	case action == "find_one":
+		err = model.FindOne()
+	case action == "find_many":
+		err = model.FindMany()
+	case action == "remove":
+		err = model.Remove()
 	}
 }
 
