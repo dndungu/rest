@@ -1,6 +1,7 @@
 package rest
 
 import (
+	"errors"
 	"gopkg.in/zatiti/router.v1"
 	"net/http"
 )
@@ -54,7 +55,7 @@ func (s *Service) process(modelFactory *ModelFactory, action string) router.Hand
 			return
 		}
 		// Call the relevant model action
-		s.storageOperation(model, action)
+		err = s.storageOperation(model, action)
 		// Handle failed database operation
 		if err != nil {
 			s.Logger.Error(err)
@@ -74,20 +75,21 @@ func (s *Service) process(modelFactory *ModelFactory, action string) router.Hand
 func (s *Service) storageOperation(model *Model, action string) error {
 	switch {
 	case action == "insert_one":
-		err = model.InsertOne()
+		return model.InsertOne()
 	case action == "insert_many":
-		err = model.InsertMany()
+		return model.InsertMany()
 	case action == "update":
-		err = model.Update()
+		return model.Update()
 	case action == "upsert":
-		err = model.Upsert()
+		return model.Upsert()
 	case action == "find_one":
-		err = model.FindOne()
+		return model.FindOne()
 	case action == "find_many":
-		err = model.FindMany()
+		return model.FindMany()
 	case action == "remove":
-		err = model.Remove()
+		return model.Remove()
 	}
+	return errors.New("The data operation must be one of insert_one, insert_many, update, upsert, find_one, find_many or remove")
 }
 
 // InsertOne creates a http handler that will create a document in model's database.
