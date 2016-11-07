@@ -44,11 +44,13 @@ type Metrics interface {
 	NewTimer(stat string) func()
 }
 
+// Event -
 type Event struct {
 	Request  *http.Request
 	Response *Response
 }
 
+// NewService -
 func NewService() *Service {
 	return &Service{}
 }

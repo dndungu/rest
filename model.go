@@ -37,7 +37,7 @@ type Response struct {
 	Status  int
 }
 
-// ModelContext
+// ModelContext -
 type Context struct {
 	Action   string
 	Input    interface{}
@@ -46,6 +46,7 @@ type Context struct {
 	Type     reflect.Type
 }
 
+// Model -
 type Model struct {
 	Name string
 	Context
@@ -72,7 +73,7 @@ func (model *Model) UseValidator(s Validator) {
 	model.Validator = s
 }
 
-// GenericModelFactory -
+// ModelFactory -
 type ModelFactory struct {
 	Name       string
 	Type       reflect.Type
