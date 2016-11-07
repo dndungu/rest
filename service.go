@@ -1,10 +1,27 @@
 package rest
 
+import "net/http"
+
 // Service holds application scope broker, logger and metrics adapters
 type Service struct {
 	Broker  Broker
 	Logger  Logger
 	Metrics Metrics
+}
+
+// UseBroker - set the desired broker
+func (s *Service) UseBroker(b Broker) {
+	s.Broker = b
+}
+
+// UseLogger - set the desired logger
+func (s *Service) UseLogger(l Logger) {
+	s.Logger = l
+}
+
+// UseMetrics - set the desired metrics
+func (s *Service) UseMetrics(m Metrics) {
+	s.Metrics = m
 }
 
 // Broker is an event stream adapter to notify other microservices of state changes
@@ -22,16 +39,16 @@ type Logger interface {
 
 // Metrics is an adapter to track application performance metrics
 type Metrics interface {
-	Incr(stat string, count int64)
-	Timing(stat string, delta int64)
+	Incr(stat string, count int64) error
+	Timing(stat string, delta int64) error
 	NewTimer(stat string) func()
 }
 
-// NewTimer creates a stop timer to track the performance of a function
-func (s *Service) NewTimer(stat string) func() {
-	// Allow metrics to be optional
-	if s.Metrics == nil {
-		return func() {}
-	}
-	return s.Metrics.NewTimer(stat)
+type Event struct {
+	Request  *http.Request
+	Response *Response
+}
+
+func NewService() *Service {
+	return &Service{}
 }

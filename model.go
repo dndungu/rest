@@ -1,54 +1,136 @@
 package rest
 
-import "net/http"
-
-// ModelFactory - has a New method that creates new model instances
-type ModelFactory interface {
-	New(r *http.Request) Model
-}
-
-// Model defines the interface models are expected to expose
-type Model interface {
-	Identity
-	Sanitizer
-	Serializer
-	Storage
-	Response() *Response
-}
-
-// Identity - returns name of the model
-type Identity interface {
-	Name() string
-}
+import (
+	"net/http"
+	"reflect"
+)
 
 // Serializer - could be used for JSON marshalling and unmarshalling
 type Serializer interface {
 	Decode() error
 	Encode(v interface{}) ([]byte, error)
+	UseContext(*Context)
 }
 
-// Error - wraps validation errors to provide more info to the client e.g invalid fields, conflict etc
-type Error struct {
-	Code    int
-	Message string
-}
-
-// Error - return the error message string
-func (e Error) Error() string {
-	return e.Message
-}
-
-// Sanitizer - input validation
-type Sanitizer interface {
-	Validate(mode string) *Error
+// Validator - input validation
+type Validator interface {
+	Validate() error
+	UseContext(*Context)
 }
 
 // Storage - database abstraction
 type Storage interface {
-	Insert() error
+	InsertOne() error
+	InsertMany() error
 	Remove() error
 	FindOne() error
 	FindMany() error
 	Update() error
 	Upsert() error
+	UseContext(*Context)
+}
+
+// Response - holds the data to be sent to the client
+type Response struct {
+	Body    interface{}
+	Headers map[string]string
+	Status  int
+}
+
+// ModelContext
+type Context struct {
+	Action   string
+	Input    interface{}
+	Request  *http.Request
+	Response Response
+	Type     reflect.Type
+}
+
+type Model struct {
+	Name string
+	Context
+	Storage
+	Validator
+	Serializer
+}
+
+// UseStorage -
+func (model *Model) UseStorage(s Storage) {
+	s.UseContext(&model.Context)
+	model.Storage = s
+}
+
+// UseSerializer -
+func (model *Model) UseSerializer(s Serializer) {
+	s.UseContext(&model.Context)
+	model.Serializer = s
+}
+
+// UseValidator -
+func (model *Model) UseValidator(s Validator) {
+	s.UseContext(&model.Context)
+	model.Validator = s
+}
+
+// GenericModelFactory -
+type ModelFactory struct {
+	Name       string
+	Type       reflect.Type
+	Headers    map[string]string
+	Storage    Storage
+	Validator  Validator
+	Serializer Serializer
+}
+
+// New -
+func (f *ModelFactory) New(r *http.Request, action string) *Model {
+	context := Context{Action: action, Request: r, Response: Response{Headers: f.Headers}, Type: f.Type}
+	model := Model{}
+	model.Name = f.Name
+	model.Context = context
+	model.UseStorage(f.Storage)
+	model.UseValidator(f.Validator)
+	model.UseSerializer(f.Serializer)
+	return &model
+}
+
+// UseName -
+func (f *ModelFactory) UseName(name string) *ModelFactory {
+	f.Name = name
+	return f
+}
+
+// UseType -
+func (f *ModelFactory) UseType(t reflect.Type) *ModelFactory {
+	f.Type = t
+	return f
+}
+
+// UseHeaders -
+func (f *ModelFactory) UseHeaders(headers map[string]string) *ModelFactory {
+	f.Headers = headers
+	return f
+}
+
+// UseStorage
+func (f *ModelFactory) UseStorage(s Storage) *ModelFactory {
+	f.Storage = s
+	return f
+}
+
+// UseValidator
+func (f *ModelFactory) UseValidator(v Validator) *ModelFactory {
+	f.Validator = v
+	return f
+}
+
+// UseSerializer
+func (f *ModelFactory) UseSerializer(s Serializer) *ModelFactory {
+	f.Serializer = s
+	return f
+}
+
+// NewFactory -
+func NewFactory() *ModelFactory {
+	return &ModelFactory{}
 }
