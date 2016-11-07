@@ -90,12 +90,12 @@ func (s *Service) storageOperation(model *Model, action string) error {
 	}
 }
 
-// Insert creates a http handler that will create a document in model's database.
+// InsertOne creates a http handler that will create a document in model's database.
 func (s *Service) InsertOne(modelFactory *ModelFactory) router.Handler {
 	return s.process(modelFactory, "insert_one")
 }
 
-// Insert creates a http handler that will create a document in model's database.
+// InsertMany creates a http handler that will create a document in model's database.
 func (s *Service) InsertMany(modelFactory *ModelFactory) router.Handler {
 	return s.process(modelFactory, "insert_many")
 }

@@ -37,7 +37,7 @@ type Response struct {
 	Status  int
 }
 
-// ModelContext -
+// Context -
 type Context struct {
 	Action   string
 	Input    interface{}
@@ -113,19 +113,19 @@ func (f *ModelFactory) UseHeaders(headers map[string]string) *ModelFactory {
 	return f
 }
 
-// UseStorage
+// UseStorage -
 func (f *ModelFactory) UseStorage(s Storage) *ModelFactory {
 	f.Storage = s
 	return f
 }
 
-// UseValidator
+// UseValidator -
 func (f *ModelFactory) UseValidator(v Validator) *ModelFactory {
 	f.Validator = v
 	return f
 }
 
-// UseSerializer
+// UseSerializer -
 func (f *ModelFactory) UseSerializer(s Serializer) *ModelFactory {
 	f.Serializer = s
 	return f
