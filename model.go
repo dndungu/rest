@@ -95,12 +95,6 @@ func (f *ModelFactory) New(r *http.Request, action string) *Model {
 	return &model
 }
 
-// UseName -
-func (f *ModelFactory) UseName(name string) *ModelFactory {
-	f.Name = name
-	return f
-}
-
 // UseType -
 func (f *ModelFactory) UseType(t reflect.Type) *ModelFactory {
 	f.Type = t
@@ -108,7 +102,7 @@ func (f *ModelFactory) UseType(t reflect.Type) *ModelFactory {
 }
 
 // UseHeaders -
-func (f *ModelFactory) UseHeaders(headers map[string]string) *ModelFactory {
+func (f *ModelFactory) SetDefaultHeaders(headers map[string]string) *ModelFactory {
 	f.Headers = headers
 	return f
 }
@@ -132,6 +126,7 @@ func (f *ModelFactory) UseSerializer(s Serializer) *ModelFactory {
 }
 
 // NewFactory -
-func NewFactory() *ModelFactory {
-	return &ModelFactory{}
+func NewFactory(name string) *ModelFactory {
+	f := &ModelFactory{Name: name}
+	return f
 }

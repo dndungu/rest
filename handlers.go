@@ -1,7 +1,6 @@
 package rest
 
 import (
-	"errors"
 	"gopkg.in/zatiti/router.v1"
 	"net/http"
 )
@@ -14,16 +13,7 @@ func (s *Service) process(modelFactory *ModelFactory, action string) router.Hand
 		// Event is the name used to track the transaction,
 		event := model.Name + "_" + action
 		// Track how long this function take to return.
-		if s.Metrics != nil {
-			stop := s.Metrics.NewTimer(event)
-			defer func() {
-				stop()
-				err := s.Metrics.Incr(event, 1)
-				if err != nil {
-					s.Logger.Error(err)
-				}
-			}()
-		}
+		stop := s.Metrics.NewTimer(event)
 		// Send response back to client when this function returns
 		defer func() {
 			// Get a pointer to the response struct
@@ -32,6 +22,7 @@ func (s *Service) process(modelFactory *ModelFactory, action string) router.Hand
 			body, err := model.Encode(response.Body)
 			if err != nil {
 				body = []byte(http.StatusText(http.StatusInternalServerError))
+				s.Logger.Error(err)
 			}
 			// Set response headers
 			for key, value := range response.Headers {
@@ -54,42 +45,39 @@ func (s *Service) process(modelFactory *ModelFactory, action string) router.Hand
 			s.Logger.Error(err.Error())
 			return
 		}
-		// Call the relevant model action
-		err = s.storageOperation(model, action)
+		switch {
+		case action == "insert_one":
+			err = model.InsertOne()
+		case action == "insert_many":
+			err = model.InsertMany()
+		case action == "update":
+			err = model.Update()
+		case action == "upsert":
+			err = model.Upsert()
+		case action == "find_one":
+			err = model.FindOne()
+		case action == "find_many":
+			err = model.FindMany()
+		case action == "remove":
+			err = model.Remove()
+		}
 		// Handle failed database operation
 		if err != nil {
 			s.Logger.Error(err)
 		}
-		if s.Broker != nil {
-			// If event broker is defined send the event to through the stream
-			err := s.Broker.Publish(event, &Event{Request: r, Response: &model.Context.Response})
-			if err != nil {
-				model.Context.Response.Status = http.StatusInternalServerError
-				s.Logger.Error(err)
-			}
+		// If event broker is defined send the event to through the stream
+		err = s.Broker.Publish(event, &Event{Request: r, Response: &model.Context.Response})
+		if err != nil {
+			model.Context.Response.Status = http.StatusInternalServerError
+			s.Logger.Error(err)
 		}
+		err = s.Metrics.Incr(event, 1)
+		if err != nil {
+			model.Context.Response.Status = http.StatusInternalServerError
+			s.Logger.Error(err)
+		}
+		stop()
 	}
-}
-
-// dataOperation -
-func (s *Service) storageOperation(model *Model, action string) error {
-	switch {
-	case action == "insert_one":
-		return model.InsertOne()
-	case action == "insert_many":
-		return model.InsertMany()
-	case action == "update":
-		return model.Update()
-	case action == "upsert":
-		return model.Upsert()
-	case action == "find_one":
-		return model.FindOne()
-	case action == "find_many":
-		return model.FindMany()
-	case action == "remove":
-		return model.Remove()
-	}
-	return errors.New("The data operation must be one of insert_one, insert_many, update, upsert, find_one, find_many or remove")
 }
 
 // InsertOne creates a http handler that will create a document in model's database.

@@ -21,7 +21,12 @@ func (j *JSON) Decode() error {
 	if j.Context.Request.ContentLength == 0 {
 		return nil
 	}
-	v := reflect.New(j.Context.Type).Interface()
+	var v interface{}
+	if j.Context.Action == "insert_many" {
+		v = reflect.MakeSlice(reflect.SliceOf(j.Context.Type), 1, 1).Interface()
+	} else {
+		v = reflect.New(j.Context.Type).Interface()
+	}
 	decoder := json.NewDecoder(j.Context.Request.Body)
 	err := decoder.Decode(&v)
 	j.Context.Input = v
