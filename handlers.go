@@ -21,6 +21,7 @@ func (s *Service) process(modelFactory *ModelFactory, action string) router.Hand
 			status := response.Status
 			body, err := model.Encode(response.Body)
 			if err != nil {
+				status = http.StatusInternalServerError
 				body = []byte(http.StatusText(http.StatusInternalServerError))
 				s.Logger.Error(err)
 			}

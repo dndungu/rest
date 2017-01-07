@@ -16,6 +16,7 @@ type FakeScenario struct {
 	failDatabase bool
 	failBroker   bool
 	failMetrics  bool
+	failEncode   bool
 }
 
 type MockBroker struct {
@@ -151,6 +152,15 @@ func (fs *FakeStorage) FakeAction(good, bad int) error {
 
 }
 
+type JSONFail struct {
+	*Context
+	JSON
+}
+
+func (j JSONFail) Encode(v interface{}) ([]byte, error) {
+	return nil, errors.New("Encode failing intentionally")
+}
+
 func NewFakeService(scenario FakeScenario) *Service {
 	service := NewService()
 	service.UseLogger(&MockLogger{})
@@ -169,12 +179,18 @@ func NewTestRequest(verb, url, input string) *http.Request {
 
 func NewFakeFactory(s FakeScenario) *ModelFactory {
 	headers := map[string]string{"Content-Type": "application/json"}
-	f := NewFactory("tester").
+	var serializer Serializer
+	if s.failEncode {
+		serializer = &JSONFail{}
+	} else {
+		serializer = &JSON{}
+	}
+	f := NewModel("tester").
 		SetDefaultHeaders(headers).
 		UseType(reflect.TypeOf(FakeFields{})).
 		UseStorage(&FakeStorage{fail: s.failDatabase}).
 		UseValidator(&FakeValidator{}).
-		UseSerializer(&JSON{})
+		UseSerializer(serializer)
 	return f
 }
 
@@ -213,6 +229,8 @@ func TestInsertOne(t *testing.T) {
 		{FakeScenario{url: url, body: invalidBody, failDatabase: false, failBroker: true, failMetrics: true}, http.StatusBadRequest},
 		{FakeScenario{url: url, body: invalidBody, failDatabase: true, failBroker: false, failMetrics: true}, http.StatusBadRequest},
 		{FakeScenario{url: url, body: invalidBody, failDatabase: true, failBroker: true, failMetrics: false}, http.StatusBadRequest},
+
+		{FakeScenario{url: url, body: validBody, failDatabase: false, failBroker: false, failMetrics: false, failEncode: true}, http.StatusInternalServerError},
 	}
 	for _, test := range tests {
 		service := NewFakeService(test.scenario)

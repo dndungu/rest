@@ -125,8 +125,8 @@ func (f *ModelFactory) UseSerializer(s Serializer) *ModelFactory {
 	return f
 }
 
-// NewFactory -
-func NewFactory(name string) *ModelFactory {
+// NewModel -
+func NewModel(name string) *ModelFactory {
 	f := &ModelFactory{Name: name}
 	return f
 }
