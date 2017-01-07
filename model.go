@@ -101,8 +101,8 @@ func (f *ModelFactory) UseType(t reflect.Type) *ModelFactory {
 	return f
 }
 
-// SetDefaultHeaders -
-func (f *ModelFactory) SetDefaultHeaders(headers map[string]string) *ModelFactory {
+// UseHeaders -
+func (f *ModelFactory) UseHeaders(headers map[string]string) *ModelFactory {
 	f.Headers = headers
 	return f
 }

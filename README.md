@@ -21,7 +21,7 @@ REST makes it easy to mock database, metrics client, and event broker to allow f
 ```go
 
 todoModel := NewModel("todo").
-            SetDefaultHeaders(headers).
+            UseHeaders(headers).
 			UseType(reflect.TypeOf(FakeFields{})).
 			UseStorage(&FakeStorage{fail: s.failDB}).
 			UseValidator(&FakeValidator{}).

@@ -186,7 +186,7 @@ func NewFakeFactory(s FakeScenario) *ModelFactory {
 		serializer = &JSON{}
 	}
 	f := NewModel("tester").
-		SetDefaultHeaders(headers).
+		UseHeaders(headers).
 		UseType(reflect.TypeOf(FakeFields{})).
 		UseStorage(&FakeStorage{fail: s.failDatabase}).
 		UseValidator(&FakeValidator{}).
