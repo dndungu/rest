@@ -19,11 +19,12 @@ REST makes it easy to mock database, metrics client, and event broker to allow f
 ## Example
 
 ```go
-    f := NewFactory("todo").
-        SetDefaultHeaders(headers).
-        UseType(reflect.TypeOf(FakeFields{})).
-        UseStorage(&FakeStorage{fail: s.failDB}).
-        UseValidator(&FakeValidator{}).
-        UseSerializer(&JSON{})
+
+todoModel := NewModel("todo").
+            SetDefaultHeaders(headers).
+			UseType(reflect.TypeOf(FakeFields{})).
+			UseStorage(&FakeStorage{fail: s.failDB}).
+			UseValidator(&FakeValidator{}).
+			UseSerializer(&JSON{})
 
 ```
