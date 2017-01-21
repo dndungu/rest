@@ -52,3 +52,8 @@ type Storage interface {
 	Update() error
 	Upsert() error
 }
+
+type Event struct {
+	Request  *http.Request `json:"request"`
+	Response *Response     `json:"response"`
+}

@@ -56,7 +56,7 @@ func (s *Service) persist(modelFactory ModelFactory, mode string) router.Handler
 		response := model.Response()
 		// If event broker is defined use it
 		if s.Broker != nil {
-			err = s.Broker.Publish(event, response)
+			err = s.Broker.Publish(event, &Event{Request: r, Response: response})
 			if err != nil {
 				status, body = InternalServerErrorResponse()
 				write(status, body)
@@ -138,7 +138,7 @@ func (s *Service) find(modelFactory ModelFactory, mode string) router.Handler {
 		response := model.Response()
 		// Notify other services, if an event broker exists
 		if s.Broker != nil {
-			err = s.Broker.Publish(event, response)
+			err = s.Broker.Publish(event, &Event{Request: r, Response: response})
 			if err != nil {
 				status, body = InternalServerErrorResponse()
 				write(status, body)
@@ -203,7 +203,7 @@ func (s *Service) Remove(modelFactory ModelFactory) router.Handler {
 		}
 		response := model.Response()
 		if s.Broker != nil {
-			err = s.Broker.Publish(event, response)
+			err = s.Broker.Publish(event, &Event{Request: r, Response: response})
 			if err != nil {
 				status, body = InternalServerErrorResponse()
 				write(status, body)

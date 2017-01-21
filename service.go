@@ -9,7 +9,7 @@ type Service struct {
 
 // Broker is an event stream adapter to notify other microservices of state changes
 type Broker interface {
-	Publish(event string, v interface{}) error
+	Publish(event string, v *Event) error
 }
 
 // Logger is an leveled logging interface
