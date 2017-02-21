@@ -20,11 +20,15 @@ REST makes it easy to mock database, metrics client, and event broker to allow f
 
 ```go
 
-todoModel := NewModel("todo").
-            UseHeaders(headers).
-			UseType(reflect.TypeOf(FakeFields{})).
-			UseStorage(&FakeStorage{fail: s.failDB}).
-			UseValidator(&FakeValidator{}).
-			UseSerializer(&JSON{})
+package main
+
+import("github.com/dndungu/rest")
+
+todoResource := NewResource("todo").
+	UseHeaders(headers).
+	UseType(reflect.TypeOf(FakeFields{})).
+	UseStorage(&Mongo{}).
+	UseValidator(&FakeValidator{}).
+	UseSerializer(&JSON{})
 
 ```

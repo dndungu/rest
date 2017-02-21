@@ -73,8 +73,8 @@ func (model *Model) UseValidator(s Validator) {
 	model.Validator = s
 }
 
-// ModelFactory -
-type ModelFactory struct {
+// Resource -
+type Resource struct {
 	Name       string
 	Type       reflect.Type
 	Headers    map[string]string
@@ -84,7 +84,7 @@ type ModelFactory struct {
 }
 
 // New -
-func (f *ModelFactory) New(r *http.Request, action string) *Model {
+func (f *Resource) New(r *http.Request, action string) *Model {
 	context := Context{Action: action, Request: r, Response: Response{Headers: f.Headers}, Type: f.Type}
 	model := Model{}
 	model.Name = f.Name
@@ -96,37 +96,37 @@ func (f *ModelFactory) New(r *http.Request, action string) *Model {
 }
 
 // UseType -
-func (f *ModelFactory) UseType(t reflect.Type) *ModelFactory {
+func (f *Resource) UseType(t reflect.Type) *Resource {
 	f.Type = t
 	return f
 }
 
 // UseHeaders -
-func (f *ModelFactory) UseHeaders(headers map[string]string) *ModelFactory {
+func (f *Resource) UseHeaders(headers map[string]string) *Resource {
 	f.Headers = headers
 	return f
 }
 
 // UseStorage -
-func (f *ModelFactory) UseStorage(s Storage) *ModelFactory {
+func (f *Resource) UseStorage(s Storage) *Resource {
 	f.Storage = s
 	return f
 }
 
 // UseValidator -
-func (f *ModelFactory) UseValidator(v Validator) *ModelFactory {
+func (f *Resource) UseValidator(v Validator) *Resource {
 	f.Validator = v
 	return f
 }
 
 // UseSerializer -
-func (f *ModelFactory) UseSerializer(s Serializer) *ModelFactory {
+func (f *Resource) UseSerializer(s Serializer) *Resource {
 	f.Serializer = s
 	return f
 }
 
-// NewModel -
-func NewModel(name string) *ModelFactory {
-	f := &ModelFactory{Name: name}
+// NewResource -
+func NewResource(name string) *Resource {
+	f := &Resource{Name: name}
 	return f
 }

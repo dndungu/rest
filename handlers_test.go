@@ -6,8 +6,10 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"reflect"
 	"testing"
+	"time"
 )
 
 type FakeScenario struct {
@@ -41,26 +43,22 @@ func (ml MockLogger) Error(v interface{}) {
 func (ml MockLogger) Fatal(v interface{}) {
 }
 
-type MockMetrics struct {
+type FakeMetricsClient struct {
 	fail bool
 }
 
-func (mm MockMetrics) Incr(stat string, count int64) error {
+func (mm FakeMetricsClient) Incr(stat string, tags []string, count float64) error {
 	if mm.fail {
 		return errors.New("The metrics client failed on purpose")
 	}
 	return nil
 }
 
-func (mm MockMetrics) Timing(stat string, delta int64) error {
+func (mm FakeMetricsClient) Timing(stat string, d time.Duration, tags []string, delta float64) error {
 	if mm.fail {
 		return errors.New("The metrics client failed on purpose")
 	}
 	return nil
-}
-
-func (mm MockMetrics) NewTimer(stat string) func() {
-	return func() {}
 }
 
 type FakeFields struct {
@@ -163,9 +161,16 @@ func (j JSONFail) Encode(v interface{}) ([]byte, error) {
 
 func NewFakeService(scenario FakeScenario) *Service {
 	service := NewService()
-	service.UseLogger(&MockLogger{})
+	logger := &MockLogger{}
+	service.UseLogger(logger)
 	service.UseBroker(&MockBroker{fail: scenario.failBroker})
-	service.UseMetrics(&MockMetrics{fail: scenario.failMetrics})
+	metricsService := NewServiceMetrics()
+	metricsClient := FakeMetricsClient{fail: scenario.failMetrics}
+	metricsService.UseClient(metricsClient)
+	metricsService.UseLogger(logger)
+	hostname, _ := os.Hostname()
+	metricsService.UseTags([]string{hostname})
+	service.UseMetrics(metricsService)
 	return service
 }
 
@@ -177,7 +182,7 @@ func NewTestRequest(verb, url, input string) *http.Request {
 	return httptest.NewRequest(verb, url, body)
 }
 
-func NewFakeFactory(s FakeScenario) *ModelFactory {
+func NewFakeResource(s FakeScenario) *Resource {
 	headers := map[string]string{"Content-Type": "application/json"}
 	var serializer Serializer
 	if s.failEncode {
@@ -185,7 +190,7 @@ func NewFakeFactory(s FakeScenario) *ModelFactory {
 	} else {
 		serializer = &JSON{}
 	}
-	f := NewModel("tester").
+	f := NewResource("tester").
 		UseHeaders(headers).
 		UseType(reflect.TypeOf(FakeFields{})).
 		UseStorage(&FakeStorage{fail: s.failDatabase}).
@@ -234,7 +239,7 @@ func TestInsertOne(t *testing.T) {
 	}
 	for _, test := range tests {
 		service := NewFakeService(test.scenario)
-		f := NewFakeFactory(test.scenario)
+		f := NewFakeResource(test.scenario)
 		h := service.InsertOne(f)
 		w := httptest.NewRecorder()
 		r := NewTestRequest("POST", test.scenario.url, test.scenario.body)
@@ -264,7 +269,7 @@ func TestInsertMany(t *testing.T) {
 	}
 	for _, test := range tests {
 		service := NewFakeService(test.scenario)
-		f := NewFakeFactory(test.scenario)
+		f := NewFakeResource(test.scenario)
 		h := service.InsertMany(f)
 		w := httptest.NewRecorder()
 		r := NewTestRequest("POST", test.scenario.url, test.scenario.body)
@@ -313,7 +318,7 @@ func TestUpdate(t *testing.T) {
 		{FakeScenario{url: url, body: invalidBody, failDatabase: true, failBroker: true, failMetrics: false}, http.StatusBadRequest},
 	}
 	for _, test := range tests {
-		f := NewFakeFactory(test.scenario)
+		f := NewFakeResource(test.scenario)
 		service := NewFakeService(test.scenario)
 		h := service.Update(f)
 		w := httptest.NewRecorder()
@@ -369,7 +374,7 @@ func TestUpsert(t *testing.T) {
 		{FakeScenario{url: url, body: invalidBody, failDatabase: true, failBroker: true, failMetrics: false}, http.StatusBadRequest},
 	}
 	for _, test := range tests {
-		f := NewFakeFactory(test.scenario)
+		f := NewFakeResource(test.scenario)
 		service := NewFakeService(test.scenario)
 		h := service.Upsert(f)
 		w := httptest.NewRecorder()
@@ -411,7 +416,7 @@ func TestRemove(t *testing.T) {
 		{FakeScenario{url: vurl, failDatabase: true, failBroker: true, failMetrics: false}, http.StatusInternalServerError},
 	}
 	for _, test := range tests {
-		f := NewFakeFactory(test.scenario)
+		f := NewFakeResource(test.scenario)
 		service := NewFakeService(test.scenario)
 		h := service.Remove(f)
 		w := httptest.NewRecorder()
@@ -453,7 +458,7 @@ func TestFindOne(t *testing.T) {
 		{FakeScenario{url: vurl, failDatabase: true, failBroker: true, failMetrics: false}, http.StatusInternalServerError},
 	}
 	for _, test := range tests {
-		f := NewFakeFactory(test.scenario)
+		f := NewFakeResource(test.scenario)
 		service := NewFakeService(test.scenario)
 		h := service.FindOne(f)
 		w := httptest.NewRecorder()
@@ -482,12 +487,12 @@ func TestFindMany(t *testing.T) {
 		{FakeScenario{url: vurl, failDatabase: true, failBroker: true, failMetrics: false}, http.StatusInternalServerError},
 	}
 	for _, test := range tests {
-		f := NewFakeFactory(test.scenario)
+		resource := NewFakeResource(test.scenario)
 		service := NewFakeService(test.scenario)
-		h := service.FindMany(f)
+		handler := service.FindMany(resource)
 		w := httptest.NewRecorder()
 		r := NewTestRequest("GET", test.scenario.url, test.scenario.body)
-		h(w, r)
+		handler(w, r)
 		actual := w.Code
 		if actual != test.expected {
 			t.Errorf("Error, expected %d, got %d using URL: %s", test.expected, actual, test.scenario.url)

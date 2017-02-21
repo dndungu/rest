@@ -5,11 +5,11 @@ import (
 	"net/http"
 )
 
-// write creates a http handler for creating or updating a document depending on the action provided
-func (s *Service) process(modelFactory *ModelFactory, action string) router.Handler {
+// rovided
+func (s *Service) process(resource *Resource, action string) router.Handler {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// When a new request comes in we want a new model instance created to handle that request.
-		model := modelFactory.New(r, action)
+		model := resource.New(r, action)
 		// Event is the name used to track the transaction,
 		event := model.Name + "_" + action
 		// Track how long this function take to return.
@@ -82,36 +82,36 @@ func (s *Service) process(modelFactory *ModelFactory, action string) router.Hand
 }
 
 // InsertOne creates a http handler that will create a document in model's database.
-func (s *Service) InsertOne(modelFactory *ModelFactory) router.Handler {
-	return s.process(modelFactory, "insert_one")
+func (s *Service) InsertOne(resource *Resource) router.Handler {
+	return s.process(resource, "insert_one")
 }
 
 // InsertMany creates a http handler that will create a document in model's database.
-func (s *Service) InsertMany(modelFactory *ModelFactory) router.Handler {
-	return s.process(modelFactory, "insert_many")
+func (s *Service) InsertMany(resource *Resource) router.Handler {
+	return s.process(resource, "insert_many")
 }
 
 // Update creates a http handler that will updates a document by the model's update selector in model's database
-func (s *Service) Update(modelFactory *ModelFactory) router.Handler {
-	return s.process(modelFactory, "update")
+func (s *Service) Update(resource *Resource) router.Handler {
+	return s.process(resource, "update")
 }
 
 // Upsert creates a http handler that will upsert(create or update if it exists) a document selected by the model's upsert selector
-func (s *Service) Upsert(modelFactory *ModelFactory) router.Handler {
-	return s.process(modelFactory, "upsert")
+func (s *Service) Upsert(resource *Resource) router.Handler {
+	return s.process(resource, "upsert")
 }
 
 // FindOne - creates a http handler that will return one document from a model's database if the id exists
-func (s *Service) FindOne(modelFactory *ModelFactory) router.Handler {
-	return s.process(modelFactory, "find_one")
+func (s *Service) FindOne(resource *Resource) router.Handler {
+	return s.process(resource, "find_one")
 }
 
 // FindMany - creates a http handler that will list documents from a model's database
-func (s *Service) FindMany(modelFactory *ModelFactory) router.Handler {
-	return s.process(modelFactory, "find_many")
+func (s *Service) FindMany(resource *Resource) router.Handler {
+	return s.process(resource, "find_many")
 }
 
 // Remove creates a http handler that will delete a document by remove selector specified in the model model
-func (s *Service) Remove(modelFactory *ModelFactory) router.Handler {
-	return s.process(modelFactory, "remove")
+func (s *Service) Remove(resource *Resource) router.Handler {
+	return s.process(resource, "remove")
 }
