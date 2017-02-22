@@ -56,7 +56,7 @@ const (
 	UPDATE = "update"
 	// UPSERT -
 	UPSERT = "upsert"
-	// FINDONE
+	// FINDONE -
 	FINDONE = "findOne"
 	// FINDMANY -
 	FINDMANY = "findMany"
