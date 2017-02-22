@@ -48,7 +48,7 @@ func (c *Context) GetResponse() (r Response) {
 	return c.data[RESPONSE].(Response)
 }
 
-// SetResponsr -
+// SetResponse -
 func (c *Context) SetResponse(r Response) {
 	c.data[RESPONSE] = r
 }

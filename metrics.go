@@ -4,25 +4,25 @@ import (
 	"time"
 )
 
-// Client - satisfies a statsd interface
+// MetricsClient - satisfies a statsd interface
 type MetricsClient interface {
 	Incr(string, []string, float64) error
 	Timing(string, time.Duration, []string, float64) error
 }
 
-// Metrics - a metrics client
+// ServiceMetrics - a metrics client
 type ServiceMetrics struct {
 	Client MetricsClient
 	Logger Logger
 	Tags   []string
 }
 
-// NewService - creates and returns a new Metrics instance
+// NewServiceMetrics - creates and returns a new Metrics instance
 func NewServiceMetrics() *ServiceMetrics {
 	return &ServiceMetrics{}
 }
 
-// UseClient
+// UseClient -
 func (sm *ServiceMetrics) UseClient(client MetricsClient) *ServiceMetrics {
 	sm.Client = client
 	return sm
