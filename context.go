@@ -5,9 +5,9 @@ import "net/http"
 const (
 	// REQUEST - the key for http.Request object in the context
 	REQUEST = "request"
-	// REQUEST - the key for Response object in the context
+	// RESPONSE - the key for Response object in the context
 	RESPONSE = "response"
-	// REQUEST - the data operation being carried out in the transaction
+	// ACTION - the data operation being carried out in the transaction
 	ACTION = "action"
 	// DATATYPE - the reflect.Type of the resource in the transaction
 	DATATYPE = "type"
