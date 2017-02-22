@@ -3,10 +3,15 @@ package rest
 import "net/http"
 
 const (
-	REQUEST     = "request"
-	RESPONSE    = "response"
-	ACTION      = "action"
-	DATATYPE    = "type"
+	// REQUEST - the key for http.Request object in the context
+	REQUEST = "request"
+	// REQUEST - the key for Response object in the context
+	RESPONSE = "response"
+	// REQUEST - the data operation being carried out in the transaction
+	ACTION = "action"
+	// DATATYPE - the reflect.Type of the resource in the transaction
+	DATATYPE = "type"
+	// REQUESTBODY - the data sent from the client
 	REQUESTBODY = "requestBody"
 )
 
@@ -27,7 +32,7 @@ func (c *Context) Get(key string) (i interface{}) {
 	return c.data[key]
 }
 
-// Set
+// Set -
 func (c *Context) Set(key string, value interface{}) *Context {
 	c.data[key] = value
 	return c
@@ -47,18 +52,21 @@ func (c *Context) SetResponse(r Response) {
 	c.data[RESPONSE] = r
 }
 
+// SetResponseBody -
 func (c *Context) SetResponseBody(b interface{}) {
 	response := c.GetResponse()
 	response.Body = b
 	c.SetResponse(response)
 }
 
+// SetResponseHeaders -
 func (c *Context) SetResponseHeaders(h map[string][]string) {
 	response := c.GetResponse()
 	response.Headers = h
 	c.SetResponse(response)
 }
 
+// SetResponseStatus -
 func (c *Context) SetResponseStatus(s int) {
 	response := c.GetResponse()
 	response.Status = s
