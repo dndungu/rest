@@ -147,7 +147,7 @@ func (fs *FakeStorage) FakeAction(good, bad int) error {
 		return errors.New("Database failed on purpose")
 	}
 	fs.SetResponseStatus(good)
-	headers := map[string][]string{"Content-Type": []string{"application/json"}}
+	headers := map[string][]string{"Content-Type": {"application/json"}}
 	fs.SetResponseHeaders(headers)
 	return nil
 
@@ -186,7 +186,7 @@ func NewTestRequest(verb, url, input string) *http.Request {
 }
 
 func NewFakeResource(s FakeScenario) *Resource {
-	headers := map[string][]string{"Content-Type": []string{"application/json"}}
+	headers := map[string][]string{"Content-Type": {"application/json"}}
 	var serializer Serializer
 	if s.failEncode {
 		serializer = &JSONFail{}
