@@ -34,13 +34,13 @@ func (mb MockBroker) Publish(event string, v interface{}) error {
 
 type MockLogger struct{}
 
-func (ml MockLogger) Info(v interface{}) {
+func (ml MockLogger) Info(e error) {
 }
-func (ml MockLogger) Warning(v interface{}) {
+func (ml MockLogger) Warning(e error) {
 }
-func (ml MockLogger) Error(v interface{}) {
+func (ml MockLogger) Error(e error) {
 }
-func (ml MockLogger) Fatal(v interface{}) {
+func (ml MockLogger) Fatal(e error) {
 }
 
 type FakeMetricsClient struct {
@@ -76,20 +76,21 @@ func (v *FakeValidator) UseContext(c *Context) {
 
 func (v *FakeValidator) Validate() error {
 	var msg string
-	if v.Request.URL.Path == "/test/bad-id-format" {
+	if v.GetRequest().URL.Path == "/test/bad-id-format" {
 		msg = "Invalid URL parameter"
-		v.Response.Status = 400
-		v.Response.Body = msg
+		v.SetResponseStatus(400)
+		v.SetResponseBody(msg)
 		return errors.New(msg)
 	}
-	if v.Action == "insert_one" || v.Action == "update" || v.Action == "upsert" {
-		input := v.Input.(*FakeFields)
+	action := v.Get(ACTION).(string)
+	if action == "insertOne" || action == "update" || action == "upsert" {
+		input := v.Get(REQUESTBODY).(*FakeFields)
 		if input.Name == `Otieno Kamau` && input.Age == 21 {
 			return nil
 		}
 		msg = "The data is invalid"
-		v.Response.Status = 400
-		v.Response.Body = msg
+		v.SetResponseStatus(400)
+		v.SetResponseBody(msg)
 		return errors.New(msg)
 	}
 	return nil
@@ -100,8 +101,8 @@ type FakeMessage struct {
 }
 
 type FakeStorage struct {
-	fail    bool
-	Context *Context
+	fail bool
+	*Context
 }
 
 func (fs *FakeStorage) UseContext(c *Context) {
@@ -109,12 +110,12 @@ func (fs *FakeStorage) UseContext(c *Context) {
 }
 
 func (fs *FakeStorage) InsertOne() error {
-	fs.Context.Response.Body = fs.Context.Input
+	fs.SetResponseBody(fs.Get(REQUESTBODY))
 	return fs.FakeAction(http.StatusCreated, http.StatusInternalServerError)
 }
 
 func (fs *FakeStorage) InsertMany() error {
-	fs.Context.Response.Body = fs.Context.Input
+	fs.SetResponseBody(fs.Get(REQUESTBODY))
 	return fs.FakeAction(http.StatusCreated, http.StatusInternalServerError)
 }
 
@@ -127,7 +128,7 @@ func (fs *FakeStorage) FindMany() error {
 }
 
 func (fs *FakeStorage) Update() error {
-	fs.Context.Response.Body = fs.Context.Input
+	fs.SetResponseBody(fs.Get(REQUESTBODY))
 	return fs.FakeAction(http.StatusNoContent, http.StatusInternalServerError)
 }
 
@@ -136,16 +137,18 @@ func (fs *FakeStorage) Remove() error {
 }
 
 func (fs *FakeStorage) Upsert() error {
-	fs.Context.Response.Body = fs.Context.Input
+	fs.SetResponseBody(fs.Get(REQUESTBODY))
 	return fs.FakeAction(http.StatusOK, http.StatusInternalServerError)
 }
 
 func (fs *FakeStorage) FakeAction(good, bad int) error {
 	if fs.fail {
-		fs.Context.Response.Status = bad
+		fs.SetResponseStatus(bad)
 		return errors.New("Database failed on purpose")
 	}
-	fs.Context.Response.Status = good
+	fs.SetResponseStatus(good)
+	headers := map[string][]string{"Content-Type": []string{"application/json"}}
+	fs.SetResponseHeaders(headers)
 	return nil
 
 }
@@ -183,20 +186,20 @@ func NewTestRequest(verb, url, input string) *http.Request {
 }
 
 func NewFakeResource(s FakeScenario) *Resource {
-	headers := map[string]string{"Content-Type": "application/json"}
+	headers := map[string][]string{"Content-Type": []string{"application/json"}}
 	var serializer Serializer
 	if s.failEncode {
 		serializer = &JSONFail{}
 	} else {
 		serializer = &JSON{}
 	}
-	f := NewResource("tester").
+	r := NewResource("tester").
 		UseHeaders(headers).
 		UseType(reflect.TypeOf(FakeFields{})).
 		UseStorage(&FakeStorage{fail: s.failDatabase}).
 		UseValidator(&FakeValidator{}).
 		UseSerializer(serializer)
-	return f
+	return r
 }
 
 func TestInsertOne(t *testing.T) {
@@ -237,7 +240,7 @@ func TestInsertOne(t *testing.T) {
 
 		{FakeScenario{url: url, body: validBody, failDatabase: false, failBroker: false, failMetrics: false, failEncode: true}, http.StatusInternalServerError},
 	}
-	for _, test := range tests {
+	for i, test := range tests {
 		service := NewFakeService(test.scenario)
 		f := NewFakeResource(test.scenario)
 		h := service.InsertOne(f)
@@ -246,7 +249,7 @@ func TestInsertOne(t *testing.T) {
 		h(w, r)
 		actual := w.Code
 		if actual != test.expected {
-			t.Errorf("Error, expected %d, got %d for request body: %s", test.expected, actual, test.scenario.body)
+			t.Errorf("#%d Error, expected %d, got %d for request body: %s", i, test.expected, actual, test.scenario.body)
 		}
 	}
 }
@@ -267,7 +270,7 @@ func TestInsertMany(t *testing.T) {
 		{FakeScenario{url: url, body: validBody, failDatabase: true, failBroker: false, failMetrics: true}, http.StatusInternalServerError},
 		{FakeScenario{url: url, body: validBody, failDatabase: true, failBroker: true, failMetrics: false}, http.StatusInternalServerError},
 	}
-	for _, test := range tests {
+	for i, test := range tests {
 		service := NewFakeService(test.scenario)
 		f := NewFakeResource(test.scenario)
 		h := service.InsertMany(f)
@@ -276,7 +279,7 @@ func TestInsertMany(t *testing.T) {
 		h(w, r)
 		actual := w.Code
 		if actual != test.expected {
-			t.Errorf("Error, expected %d, got %d for request body: %s", test.expected, actual, test.scenario.body)
+			t.Errorf("#%d Error, expected %d, got %d for request body: %s", i, test.expected, actual, test.scenario.body)
 		}
 	}
 }
@@ -415,7 +418,7 @@ func TestRemove(t *testing.T) {
 		{FakeScenario{url: vurl, failDatabase: true, failBroker: true, failMetrics: true}, http.StatusInternalServerError},
 		{FakeScenario{url: vurl, failDatabase: true, failBroker: true, failMetrics: false}, http.StatusInternalServerError},
 	}
-	for _, test := range tests {
+	for i, test := range tests {
 		f := NewFakeResource(test.scenario)
 		service := NewFakeService(test.scenario)
 		h := service.Remove(f)
@@ -424,7 +427,7 @@ func TestRemove(t *testing.T) {
 		h(w, r)
 		actual := w.Code
 		if actual != test.expected {
-			t.Errorf("Error, expected %d, got %d using URL: %s", test.expected, actual, test.scenario.url)
+			t.Errorf("#%d Error, expected %d, got %d using URL: %s", i, test.expected, actual, test.scenario.url)
 		}
 	}
 }
@@ -497,5 +500,13 @@ func TestFindMany(t *testing.T) {
 		if actual != test.expected {
 			t.Errorf("Error, expected %d, got %d using URL: %s", test.expected, actual, test.scenario.url)
 		}
+	}
+}
+
+func TestBadAction(t *testing.T) {
+	model := Model{}
+	err := model.Execute("nonExistentAction")
+	if err == nil {
+		t.Errorf("Calling model.Execute with a non existent action should return an error")
 	}
 }

@@ -17,22 +17,22 @@ func (j *JSON) UseContext(c *Context) {
 }
 
 // Decode -
-func (j *JSON) Decode() error {
-	if j.Context.Request.ContentLength == 0 {
+func (j *JSON) Decode() (err error) {
+	r := j.Context.GetRequest()
+	if r.Method != "POST" && r.Method != "PUT" && r.Method != "PATCH" {
 		return nil
 	}
-	var v interface{}
-	if j.Context.Action == "insert_many" {
-		v = reflect.MakeSlice(reflect.SliceOf(j.Context.Type), 1, 1).Interface()
-	} else {
-		v = reflect.New(j.Context.Type).Interface()
+	t := j.Context.Get(DATATYPE).(reflect.Type)
+	v := reflect.New(t).Interface()
+	if j.Context.Get(ACTION) == INSERTMANY {
+		v = reflect.New(reflect.SliceOf(t)).Interface()
 	}
-	decoder := json.NewDecoder(j.Context.Request.Body)
-	err := decoder.Decode(&v)
-	j.Context.Input = v
+	decoder := json.NewDecoder(r.Body)
+	err = decoder.Decode(&v)
+	j.Context.Set(REQUESTBODY, v)
 	if err != nil {
-		j.Context.Response.Status = http.StatusBadRequest
-		j.Context.Response.Body = err.Error()
+		j.Context.SetResponseStatus(http.StatusBadRequest)
+		j.Context.SetResponseBody(err.Error())
 	}
 	return err
 }

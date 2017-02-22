@@ -1,6 +1,7 @@
 package rest
 
 import (
+	"errors"
 	"net/http"
 	"reflect"
 )
@@ -33,17 +34,8 @@ type Storage interface {
 // Response - holds the data to be sent to the client
 type Response struct {
 	Body    interface{}
-	Headers map[string]string
+	Headers map[string][]string
 	Status  int
-}
-
-// Context -
-type Context struct {
-	Action   string
-	Input    interface{}
-	Request  *http.Request
-	Response Response
-	Type     reflect.Type
 }
 
 // Model -
@@ -53,6 +45,37 @@ type Model struct {
 	Storage
 	Validator
 	Serializer
+}
+
+const (
+	INSERTONE  = "insertOne"
+	INSERTMANY = "insertMany"
+	UPDATE     = "update"
+	UPSERT     = "upsert"
+	FINDONE    = "findOne"
+	FINDMANY   = "findMany"
+	REMOVE     = "remove"
+)
+
+// Execute
+func (model *Model) Execute(action string) error {
+	switch {
+	case action == INSERTONE:
+		return model.InsertOne()
+	case action == INSERTMANY:
+		return model.InsertMany()
+	case action == UPDATE:
+		return model.Update()
+	case action == UPSERT:
+		return model.Upsert()
+	case action == FINDONE:
+		return model.FindOne()
+	case action == FINDMANY:
+		return model.FindMany()
+	case action == REMOVE:
+		return model.Remove()
+	}
+	return errors.New("Action must be one of [insertOne, insertMany, update, upsert, findOne, findMany, remove]")
 }
 
 // UseStorage -
@@ -77,56 +100,59 @@ func (model *Model) UseValidator(s Validator) {
 type Resource struct {
 	Name       string
 	Type       reflect.Type
-	Headers    map[string]string
+	Headers    map[string][]string
 	Storage    Storage
 	Validator  Validator
 	Serializer Serializer
 }
 
-// New -
-func (f *Resource) New(r *http.Request, action string) *Model {
-	context := Context{Action: action, Request: r, Response: Response{Headers: f.Headers}, Type: f.Type}
+// NewModel -
+func (r *Resource) NewModel(req *http.Request, action string) *Model {
 	model := Model{}
-	model.Name = f.Name
-	model.Context = context
-	model.UseStorage(f.Storage)
-	model.UseValidator(f.Validator)
-	model.UseSerializer(f.Serializer)
+	model.Name = r.Name
+	model.Context = NewContext()
+	model.Context.Set("action", action)
+	model.Context.Set("request", req)
+	model.Context.Set("response", Response{Headers: r.Headers})
+	model.Context.Set("type", r.Type)
+	model.UseStorage(r.Storage)
+	model.UseValidator(r.Validator)
+	model.UseSerializer(r.Serializer)
 	return &model
 }
 
 // UseType -
-func (f *Resource) UseType(t reflect.Type) *Resource {
-	f.Type = t
-	return f
+func (r *Resource) UseType(t reflect.Type) *Resource {
+	r.Type = t
+	return r
 }
 
 // UseHeaders -
-func (f *Resource) UseHeaders(headers map[string]string) *Resource {
-	f.Headers = headers
-	return f
+func (r *Resource) UseHeaders(headers map[string][]string) *Resource {
+	r.Headers = headers
+	return r
 }
 
 // UseStorage -
-func (f *Resource) UseStorage(s Storage) *Resource {
-	f.Storage = s
-	return f
+func (r *Resource) UseStorage(s Storage) *Resource {
+	r.Storage = s
+	return r
 }
 
 // UseValidator -
-func (f *Resource) UseValidator(v Validator) *Resource {
-	f.Validator = v
-	return f
+func (r *Resource) UseValidator(v Validator) *Resource {
+	r.Validator = v
+	return r
 }
 
 // UseSerializer -
-func (f *Resource) UseSerializer(s Serializer) *Resource {
-	f.Serializer = s
-	return f
+func (r *Resource) UseSerializer(s Serializer) *Resource {
+	r.Serializer = s
+	return r
 }
 
 // NewResource -
 func NewResource(name string) *Resource {
-	f := &Resource{Name: name}
-	return f
+	r := &Resource{Name: name}
+	return r
 }

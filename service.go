@@ -31,10 +31,10 @@ type Broker interface {
 
 // Logger is an leveled logging interface
 type Logger interface {
-	Info(v interface{})
-	Warning(v interface{})
-	Error(v interface{})
-	Fatal(v interface{})
+	Info(e error)
+	Warning(e error)
+	Error(e error)
+	Fatal(e error)
 }
 
 // Metrics is an adapter to track application performance metrics
