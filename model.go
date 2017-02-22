@@ -48,16 +48,23 @@ type Model struct {
 }
 
 const (
-	INSERTONE  = "insertOne"
+	// INSERTONE -
+	INSERTONE = "insertOne"
+	// INSERTMANY -
 	INSERTMANY = "insertMany"
-	UPDATE     = "update"
-	UPSERT     = "upsert"
-	FINDONE    = "findOne"
-	FINDMANY   = "findMany"
-	REMOVE     = "remove"
+	// UPDATE -
+	UPDATE = "update"
+	// UPSERT -
+	UPSERT = "upsert"
+	// FINDONE
+	FINDONE = "findOne"
+	// FINDMANY -
+	FINDMANY = "findMany"
+	// REMOVE -
+	REMOVE = "remove"
 )
 
-// Execute
+// Execute -
 func (model *Model) Execute(action string) error {
 	switch {
 	case action == INSERTONE:
