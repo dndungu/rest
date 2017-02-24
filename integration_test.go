@@ -2,6 +2,7 @@ package rest
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
 	"net/http"
@@ -32,15 +33,12 @@ func (mb MockBroker) Publish(event string, v interface{}) error {
 	return nil
 }
 
-type MockLogger struct{}
+type StdoutLoggingSink struct{}
 
-func (ml MockLogger) Info(e error) {
-}
-func (ml MockLogger) Warning(e error) {
-}
-func (ml MockLogger) Error(e error) {
-}
-func (ml MockLogger) Fatal(e error) {
+func (nls StdoutLoggingSink) Write(l *Log) {
+	b, _ := json.Marshal(l)
+	os.Stdout.Write(b)
+	os.Stdout.Write([]byte("\n"))
 }
 
 type FakeMetricsClient struct {
@@ -164,7 +162,9 @@ func (j JSONFail) Encode(v interface{}) ([]byte, error) {
 
 func NewFakeService(scenario FakeScenario) *Service {
 	service := NewService()
-	logger := &MockLogger{}
+	logger := &LoggingClient{}
+	sinks := []LoggingSink{StdoutLoggingSink{}}
+	logger.UseSinks(&sinks)
 	service.UseLogger(logger)
 	service.UseBroker(&MockBroker{fail: scenario.failBroker})
 	metricsService := NewServiceMetrics()
