@@ -3,6 +3,8 @@ package rest
 import (
 	"os"
 	"runtime"
+	"runtime/debug"
+	"strconv"
 	"time"
 )
 
@@ -14,11 +16,11 @@ const (
 )
 
 type Log struct {
-	CreatedAt time.Time `json:"created_at"`
-	Message   string    `json:"message"`
-	Hostname  string    `json:"hostname"`
-	File      string    `json:"file"`
-	Severity  string    `json:"severity"`
+	CreatedAt  time.Time `json:"created_at"`
+	Details    string    `json:"details"`
+	StackTrace string    `json:"stack_trace"`
+	Hostname   string    `json:"hostname"`
+	File       string    `json:"file"`
 }
 
 type LoggingSink interface {
@@ -33,33 +35,20 @@ func (lc *LoggingClient) UseSinks(ls *[]LoggingSink) {
 	lc.Sink = ls
 }
 
-func (lc *LoggingClient) CreateLog(s string, e error) (l *Log) {
+func (lc *LoggingClient) CreateLog(e error) (l *Log) {
 	l = &Log{}
 	l.CreatedAt = time.Now().UTC()
-	l.Message = e.Error()
+	l.Details = e.Error()
+	l.StackTrace = string(debug.Stack())
 	l.Hostname, _ = os.Hostname()
-	_, l.File, _, _ = runtime.Caller(4)
-	l.Severity = s
+	_, file, line, _ := runtime.Caller(2)
+	l.File = file + ":" + strconv.Itoa(line)
 	return l
 }
 
-func (lc *LoggingClient) Log(s string, e error) {
-	l := lc.CreateLog(s, e)
+func (lc *LoggingClient) Error(e error) {
+	l := lc.CreateLog(e)
 	for _, sink := range *lc.Sink {
 		sink.Write(l)
 	}
-}
-
-func (lc *LoggingClient) Info(e error) {
-	lc.Log(INFO, e)
-}
-func (lc *LoggingClient) Warning(e error) {
-	lc.Log(WARNING, e)
-}
-func (lc *LoggingClient) Error(e error) {
-	lc.Log(ERROR, e)
-}
-func (lc *LoggingClient) Fatal(e error) {
-	lc.Log(FATAL, e)
-	os.Exit(1)
 }
