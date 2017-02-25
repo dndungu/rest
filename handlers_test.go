@@ -22,7 +22,7 @@ type MockBroker struct {
 	fail bool
 }
 
-func (mb MockBroker) Publish(event string, v interface{}) error {
+func (mb MockBroker) Publish(event string, v *Event) error {
 	if mb.fail {
 		return errors.New("The broker failed on purpose")
 	}
@@ -31,12 +31,12 @@ func (mb MockBroker) Publish(event string, v interface{}) error {
 
 type MockLogger struct{}
 
-func (ml MockLogger) Info(v interface{})    {}
-func (ml MockLogger) Warning(v interface{}) {}
-func (ml MockLogger) Error(v interface{}) {
+func (ml MockLogger) Info(v error)    {}
+func (ml MockLogger) Warning(v error) {}
+func (ml MockLogger) Error(v error) {
 	//	fmt.Println(v)
 }
-func (ml MockLogger) Fatal(v interface{}) {}
+func (ml MockLogger) Fatal(v error) {}
 
 type MockMetrics struct {
 	fail bool
