@@ -37,7 +37,7 @@ func (s *Service) persist(modelFactory ModelFactory, mode string) router.Handler
 		if verr != nil {
 			status, body = verr.Code, []byte(verr.Message)
 			write(status, body)
-			s.Logger.Error(verr.Error())
+			s.Logger.Error(verr)
 			return
 		}
 		// Call the relevant model action
@@ -121,7 +121,7 @@ func (s *Service) find(modelFactory ModelFactory, mode string) router.Handler {
 		if verr != nil {
 			status, body = verr.Code, []byte(verr.Message)
 			write(status, body)
-			s.Logger.Error(verr.Message)
+			s.Logger.Error(verr)
 			return
 		}
 		var err error
@@ -192,7 +192,7 @@ func (s *Service) Remove(modelFactory ModelFactory) router.Handler {
 		verr := model.Validate("remove")
 		if verr != nil {
 			status, body = verr.Code, []byte(verr.Message)
-			s.Logger.Error(verr.Message)
+			s.Logger.Error(verr)
 			write(status, body)
 			return
 		}
